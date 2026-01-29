@@ -1,0 +1,6 @@
+{
+  "name": "GIS Steiermark",
+  "url": "https://gis.stmk.gv.at/image/rest/services",
+  "default_epsg": 32633,
+  "description": "Official geospatial data portal for Styria, Austria. Includes orthophotos (OGD_DOP) and elevation data (OGD_Hoehen)."
+}

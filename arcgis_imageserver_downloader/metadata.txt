@@ -1,0 +1,23 @@
+[general]
+name=ArcGIS ImageServer Downloader
+qgisMinimumVersion=3.40
+description=Download raster tiles from ArcGIS ImageServer REST services and create Cloud Optimized GeoTIFFs (COGs)
+version=0.1.0
+author=Harald Kristen
+email=haraldkristen@posteo.at
+
+about=This plugin allows you to download raster tiles from ArcGIS ImageServer REST services and create Cloud Optimized GeoTIFFs. It includes a user-friendly GUI for service browsing and bbox selection, as well as Processing algorithms for batch operations. Pre-configured with GIS Steiermark services. Compatible with both QGIS 3.x (Qt5) and QGIS 4.x (Qt6). Supports German and English languages.
+
+tracker=https://github.com/hkristen/qgis-arcgis-imageserver-downloader/issues
+repository=https://github.com/hkristen/qgis-arcgis-imageserver-downloader
+tags=arcgis,imageserver,raster,cog,download,geotiff
+
+homepage=https://github.com/hkristen/qgis-arcgis-imageserver-downloader
+category=Raster
+icon=icon.svg
+
+experimental=True
+deprecated=False
+
+# Qt5 and Qt6 compatible (QGIS 3.40+ and 4.0+)
+supportsQt6=True

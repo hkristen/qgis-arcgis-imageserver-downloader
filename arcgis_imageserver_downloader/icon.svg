@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple icon representing a raster grid with download arrow -->
+
+  <!-- Grid background -->
+  <rect x="2" y="2" width="20" height="20" fill="#e0e0e0" stroke="#666" stroke-width="1"/>
+
+  <!-- Grid cells -->
+  <line x1="2" y1="8" x2="22" y2="8" stroke="#999" stroke-width="0.5"/>
+  <line x1="2" y1="14" x2="22" y2="14" stroke="#999" stroke-width="0.5"/>
+  <line x1="8" y1="2" x2="8" y2="22" stroke="#999" stroke-width="0.5"/>
+  <line x1="14" y1="2" x2="14" y2="22" stroke="#999" stroke-width="0.5"/>
+
+  <!-- Download arrow (centered circle background) -->
+  <circle cx="12" cy="12" r="6" fill="#4CAF50" opacity="0.9"/>
+
+  <!-- Arrow shape -->
+  <path d="M 12 8 L 12 14 M 9 12 L 12 15 L 15 12"
+        stroke="white"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+</svg>

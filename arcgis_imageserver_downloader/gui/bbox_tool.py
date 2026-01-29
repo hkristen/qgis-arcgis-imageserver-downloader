@@ -1,0 +1,141 @@
+"""
+Map tool for drawing bounding box on canvas
+"""
+from qgis.PyQt.QtCore import pyqtSignal, Qt
+from qgis.PyQt.QtGui import QColor
+from qgis.core import (
+    QgsRectangle,
+    QgsWkbTypes,
+    QgsGeometry,
+    QgsPointXY
+)
+from qgis.gui import QgsMapTool, QgsRubberBand
+
+
+class BBoxMapTool(QgsMapTool):
+    """Map tool for selecting bounding box by drawing on canvas."""
+
+    # Signal emitted when bbox is drawn
+    bboxDrawn = pyqtSignal(QgsRectangle)
+
+    def __init__(self, canvas):
+        """Initialize the bbox map tool.
+
+        Args:
+            canvas: QgsMapCanvas instance
+        """
+        super().__init__(canvas)
+        self.canvas = canvas
+        self.start_point = None
+        self.end_point = None
+        self.rubber_band = None
+        self.is_drawing = False
+
+        # Create rubber band for visual feedback
+        self._create_rubber_band()
+
+        # Set cursor
+        self.setCursor(Qt.CrossCursor)
+
+    def _create_rubber_band(self):
+        """Create rubber band for drawing bbox."""
+        self.rubber_band = QgsRubberBand(self.canvas, QgsWkbTypes.PolygonGeometry)
+        self.rubber_band.setColor(QColor(255, 0, 0, 50))
+        self.rubber_band.setFillColor(QColor(255, 0, 0, 30))
+        self.rubber_band.setWidth(2)
+
+    def canvasPressEvent(self, event):
+        """Handle mouse press event.
+
+        Args:
+            event: QgsMapMouseEvent
+        """
+        if event.button() == Qt.LeftButton:
+            # Start drawing
+            self.start_point = self.toMapCoordinates(event.pos())
+            self.end_point = self.start_point
+            self.is_drawing = True
+            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+
+    def canvasMoveEvent(self, event):
+        """Handle mouse move event.
+
+        Args:
+            event: QgsMapMouseEvent
+        """
+        if self.is_drawing and self.start_point:
+            # Update end point
+            self.end_point = self.toMapCoordinates(event.pos())
+
+            # Create rectangle
+            rect = QgsRectangle(self.start_point, self.end_point)
+
+            # Update rubber band
+            self._update_rubber_band(rect)
+
+    def canvasReleaseEvent(self, event):
+        """Handle mouse release event.
+
+        Args:
+            event: QgsMapMouseEvent
+        """
+        if event.button() == Qt.LeftButton and self.is_drawing:
+            # Finish drawing
+            self.end_point = self.toMapCoordinates(event.pos())
+            self.is_drawing = False
+
+            # Create final rectangle
+            rect = QgsRectangle(self.start_point, self.end_point)
+
+            # Emit signal with bbox
+            if not rect.isEmpty():
+                self.bboxDrawn.emit(rect)
+
+            # Clear rubber band
+            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+
+    def _update_rubber_band(self, rect):
+        """Update rubber band geometry.
+
+        Args:
+            rect: QgsRectangle to display
+        """
+        if rect.isEmpty():
+            return
+
+        self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+
+        # Create rectangle geometry
+        points = [
+            QgsPointXY(rect.xMinimum(), rect.yMinimum()),
+            QgsPointXY(rect.xMaximum(), rect.yMinimum()),
+            QgsPointXY(rect.xMaximum(), rect.yMaximum()),
+            QgsPointXY(rect.xMinimum(), rect.yMaximum()),
+            QgsPointXY(rect.xMinimum(), rect.yMinimum())
+        ]
+
+        self.rubber_band.setToGeometry(QgsGeometry.fromPolygonXY([points]), None)
+
+    def keyPressEvent(self, event):
+        """Handle key press event.
+
+        Args:
+            event: QKeyEvent
+        """
+        if event.key() == Qt.Key_Escape:
+            # Cancel drawing
+            self.is_drawing = False
+            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+
+    def deactivate(self):
+        """Deactivate the tool."""
+        if self.rubber_band:
+            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+        self.is_drawing = False
+        super().deactivate()
+
+    def activate(self):
+        """Activate the tool."""
+        super().activate()
+        if not self.rubber_band:
+            self._create_rubber_band()
