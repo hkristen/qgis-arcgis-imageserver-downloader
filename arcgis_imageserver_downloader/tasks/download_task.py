@@ -126,12 +126,7 @@ class TileDownloadTask(QgsTask):
                     tile_filepath = raster_files[0]['id']
                     filename = tile_filepath.split("\\")[-1]
 
-                    # Skip overview tiles
-                    if filename.startswith("Ov_"):
-                        self._log(f'Skipping overview tile: {filename}')
-                        continue
-
-                    # Download tile
+                    # Download tile (download_tile raises ValueError for overview tiles)
                     output_path = self.client.download_tile(
                         self.service_url,
                         self.service_name,
@@ -154,7 +149,6 @@ class TileDownloadTask(QgsTask):
                     )
 
                 except ValueError as e:
-                    # Skip overview tiles
                     self._log(str(e))
                     continue
                 except Exception as e:

@@ -510,9 +510,9 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
     def _deactivate_bbox_tool(self):
         """Deactivate bbox drawing tool."""
-        if self.bbox_tool and self.canvas.mapTool() == self.bbox_tool:
-            self.canvas.unsetMapTool(self.bbox_tool)
         if self.bbox_tool:
+            if self.canvas.mapTool() == self.bbox_tool:
+                self.canvas.unsetMapTool(self.bbox_tool)
             self.bbox_tool.cleanup()
             self.bbox_tool = None
 
@@ -738,6 +738,9 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         selected_service = self.service_browser.get_selected_service()
         if not selected_service:
             QMessageBox.warning(self, self.tr('Validation Error'), self.tr('Please select a service.'))
+            return False
+        if not selected_service.get('base_url'):
+            QMessageBox.warning(self, self.tr('Validation Error'), self.tr('Selected service has no server URL. Please re-select a server.'))
             return False
 
         # Check bbox
@@ -1036,9 +1039,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             event: Close event
         """
         # Deactivate and clean up bbox tool
-        if self.bbox_tool:
-            self.bbox_tool.cleanup()
-            self.bbox_tool = None
         self._deactivate_bbox_tool()
 
         # Cancel any running tasks

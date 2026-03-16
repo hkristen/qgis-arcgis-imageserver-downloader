@@ -1,23 +1,23 @@
 """
 Processing algorithm to create Cloud Optimized GeoTIFF from tiles
 """
+import subprocess
+import tempfile
+import shutil
+import os
+from pathlib import Path
+
 from qgis.core import (
     QgsProcessingAlgorithm,
-    QgsProcessingParameterFolderDestination,
     QgsProcessingParameterFile,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
     QgsProcessingParameterBoolean,
     QgsProcessingException,
     QgsProcessingContext,
-    QgsProcessingFeedback,
-    QgsProcessingMultiStepFeedback
+    QgsProcessingFeedback
 )
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis import processing
-from pathlib import Path
-import tempfile
-import os
 
 
 class CreateCOGAlgorithm(QgsProcessingAlgorithm):
@@ -64,7 +64,7 @@ class CreateCOGAlgorithm(QgsProcessingAlgorithm):
 The algorithm:
 1. Builds a virtual raster (VRT) from all tiles in the input folder
 2. Warps the VRT to the specified EPSG code
-3. Creates a compressed GeoTIFF with overviews
+3. Adds overviews for efficient access
 4. Converts to COG format with LZW compression
 
 The output is a single, optimized raster file suitable for cloud storage and efficient web access.''')
@@ -139,124 +139,81 @@ The output is a single, optimized raster file suitable for cloud storage and eff
 
         feedback.pushInfo(f'Found {len(tile_files)} raster tiles')
 
-        # Use multi-step feedback for progress
-        multi_feedback = QgsProcessingMultiStepFeedback(4, feedback)
-
+        temp_dir = tempfile.mkdtemp()
         try:
-            # Create temporary directory for intermediate files
-            temp_dir = tempfile.mkdtemp()
             temp_vrt = os.path.join(temp_dir, 'temp.vrt')
-            temp_warped_vrt = os.path.join(temp_dir, 'temp_warped.vrt')
-            temp_tif = os.path.join(temp_dir, 'temp.tif')
+            temp_warped = os.path.join(temp_dir, 'temp_warped.tif')
 
             # Step 1: Build VRT from tiles
-            multi_feedback.setCurrentStep(0)
+            feedback.setProgress(0)
             feedback.pushInfo('Building virtual raster from tiles...')
+            try:
+                subprocess.run(
+                    ['gdalbuildvrt', temp_vrt] + [str(f) for f in tile_files],
+                    check=True, capture_output=True, text=True
+                )
+            except subprocess.CalledProcessError as e:
+                raise QgsProcessingException(self.tr('gdalbuildvrt failed: {0}').format(e.stderr))
 
-            vrt_result = processing.run(
-                'gdal:buildvirtualraster',
-                {
-                    'INPUT': [str(f) for f in tile_files],
-                    'RESOLUTION': 0,  # Use highest resolution
-                    'SEPARATE': False,
-                    'OUTPUT': temp_vrt
-                },
-                context=context,
-                feedback=multi_feedback
-            )
-
-            if multi_feedback.isCanceled():
+            if feedback.isCanceled():
                 return {}
 
             # Step 2: Warp to target EPSG
-            multi_feedback.setCurrentStep(1)
+            feedback.setProgress(25)
             feedback.pushInfo(f'Warping to EPSG:{epsg}...')
+            try:
+                subprocess.run(
+                    ['gdalwarp', '-t_srs', f'EPSG:{epsg}', '-multi', temp_vrt, temp_warped],
+                    check=True, capture_output=True, text=True
+                )
+            except subprocess.CalledProcessError as e:
+                raise QgsProcessingException(self.tr('gdalwarp failed: {0}').format(e.stderr))
 
-            warp_result = processing.run(
-                'gdal:warpreproject',
-                {
-                    'INPUT': temp_vrt,
-                    'SOURCE_CRS': None,  # Use source CRS
-                    'TARGET_CRS': f'EPSG:{epsg}',
-                    'RESAMPLING': 0,  # Nearest neighbor
-                    'DATA_TYPE': 0,  # Use input layer data type
-                    'OPTIONS': '',
-                    'MULTITHREADING': True,
-                    'OUTPUT': temp_warped_vrt
-                },
-                context=context,
-                feedback=multi_feedback
-            )
-
-            if multi_feedback.isCanceled():
+            if feedback.isCanceled():
                 return {}
 
-            # Step 3: Convert to compressed GeoTIFF with overviews
-            multi_feedback.setCurrentStep(2)
-            feedback.pushInfo('Creating compressed GeoTIFF...')
-
-            extra_args = f'-a_nodata {nodata}' if nodata is not None else ''
-
-            translate_result = processing.run(
-                'gdal:translate',
-                {
-                    'INPUT': temp_warped_vrt,
-                    'OPTIONS': 'COMPRESS=LZW|TILED=YES',
-                    'EXTRA': extra_args,
-                    'DATA_TYPE': 0,  # Use input layer data type
-                    'OUTPUT': temp_tif
-                },
-                context=context,
-                feedback=multi_feedback
-            )
-
-            if multi_feedback.isCanceled():
-                return {}
-
-            # Add overviews to the GeoTIFF
+            # Step 3: Add overviews
+            feedback.setProgress(50)
             feedback.pushInfo('Adding overviews...')
-            processing.run(
-                'gdal:overviews',
-                {
-                    'INPUT': temp_tif,
-                    'LEVELS': '2 4 8 16 32',
-                    'RESAMPLING': 0,  # Nearest neighbor
-                    'FORMAT': 0  # Internal (GeoTIFF)
-                },
-                context=context,
-                feedback=multi_feedback
-            )
+            try:
+                subprocess.run(
+                    ['gdaladdo', '-r', 'nearest', temp_warped, '2', '4', '8', '16', '32'],
+                    check=True, capture_output=True, text=True
+                )
+            except subprocess.CalledProcessError as e:
+                feedback.pushInfo(f'Warning: gdaladdo failed (non-critical): {e.stderr}')
+
+            if feedback.isCanceled():
+                return {}
 
             # Step 4: Convert to COG
-            multi_feedback.setCurrentStep(3)
+            feedback.setProgress(75)
             feedback.pushInfo('Converting to Cloud Optimized GeoTIFF...')
+            cog_cmd = [
+                'gdal_translate', '-of', 'COG',
+                '-co', 'COMPRESS=LZW',
+                '-co', 'OVERVIEWS=IGNORE_EXISTING',
+            ]
+            if nodata is not None:
+                cog_cmd += ['-a_nodata', str(nodata)]
+            cog_cmd += [temp_warped, output_cog]
 
-            cog_result = processing.run(
-                'gdal:translate',
-                {
-                    'INPUT': temp_tif,
-                    'OPTIONS': 'COMPRESS=LZW|OVERVIEWS=IGNORE_EXISTING',
-                    'EXTRA': '-of COG',
-                    'DATA_TYPE': 0,  # Use input layer data type
-                    'OUTPUT': output_cog
-                },
-                context=context,
-                feedback=multi_feedback
-            )
-
-            if multi_feedback.isCanceled():
-                return {}
-
-            # Cleanup temporary files
             try:
-                import shutil
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                feedback.pushInfo(f'Warning: Could not remove temporary files: {e}')
+                subprocess.run(cog_cmd, check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError as e:
+                raise QgsProcessingException(self.tr('gdal_translate (COG) failed: {0}').format(e.stderr))
 
+            feedback.setProgress(100)
             feedback.pushInfo(f'\nSuccessfully created COG: {output_cog}')
 
             return {self.OUTPUT_COG: output_cog}
 
+        except QgsProcessingException:
+            raise
         except Exception as e:
             raise QgsProcessingException(self.tr('Failed to create COG: {0}').format(str(e)))
+        finally:
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                feedback.pushInfo(f'Warning: Could not remove temporary files: {e}')

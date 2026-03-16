@@ -104,12 +104,19 @@ class ArcGISClient:
 
         last_error = None
         for attempt in range(max_retry):
+            req = urllib.request.Request(
+                full_url,
+                headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
+            )
             try:
                 with urllib.request.urlopen(req, timeout=30) as response:
-                    data = response.read()
                     output_path.parent.mkdir(parents=True, exist_ok=True)
                     with open(output_path, 'wb') as f:
-                        f.write(data)
+                        while True:
+                            chunk = response.read(65536)
+                            if not chunk:
+                                break
+                            f.write(chunk)
                     return True
             except urllib.error.URLError as e:
                 last_error = e

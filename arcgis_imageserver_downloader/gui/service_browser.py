@@ -162,6 +162,8 @@ class ServiceBrowserWidget(QWidget):
         self.fetch_task = ServiceFetchTask(base_url)
         self.fetch_task.taskCompleted.connect(self._on_fetch_complete)
         self.fetch_task.taskTerminated.connect(self._on_fetch_failed)
+        self.fetch_task.taskCompleted.connect(lambda: setattr(self, 'fetch_task', None))
+        self.fetch_task.taskTerminated.connect(lambda: setattr(self, 'fetch_task', None))
 
         QgsApplication.taskManager().addTask(self.fetch_task)
 
