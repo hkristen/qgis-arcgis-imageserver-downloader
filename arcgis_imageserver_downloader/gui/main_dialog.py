@@ -25,26 +25,20 @@ from qgis.PyQt.QtWidgets import (
 from qgis.gui import QgsDockWidget, QgsProjectionSelectionWidget
 from qgis.core import (
     QgsProject,
-    QgsRasterLayer,
     QgsRectangle,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsApplication,
-    Qgis
 )
-
-from ..utils import log
 
 from ..core.service_manager import ServiceManager
 from ..core.settings import PluginSettings
-from ..tasks.download_task import TileDownloadTask
-from ..tasks.processing_task import COGProcessingTask
 from .service_browser import ServiceBrowserWidget
 from .bbox_tool import BBoxMapTool
 from .server_management import ServerManagerMixin, custom_servers_path
+from .download_controller import DownloadControllerMixin
 
 
-class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin):
+class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadControllerMixin):
     """Dockable widget for ArcGIS ImageServer Downloader."""
 
     location = Qt.RightDockWidgetArea
@@ -486,222 +480,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin):
 
         if output_dir:
             self.output_path_edit.setText(output_dir)
-
-    def _validate_inputs(self) -> bool:
-        selected_service = self.service_browser.get_selected_service()
-        checks = [
-            (not self.current_preset, 'Please select a server.'),
-            (not selected_service, 'Please select a service.'),
-            (selected_service and not selected_service.get('base_url'), 'Selected service has no server URL. Please re-select a server.'),
-            (not self._get_bbox(), 'Please select a bounding box.'),
-            (not self.output_path_edit.text(), 'Please select an output directory.'),
-        ]
-        for failed, msg in checks:
-            if failed:
-                QMessageBox.warning(self, self.tr('Validation Error'), self.tr(msg))
-                return False
-        return True
-
-    def _start_download(self):
-        """Start the download process."""
-        if not self._validate_inputs():
-            return
-
-        # Save settings
-        self._save_settings()
-
-        # Get parameters
-        selected_service = self.service_browser.get_selected_service()
-        service_url = selected_service['base_url']
-        service_name = selected_service['name']
-        bbox = self._get_bbox()
-        output_dir = Path(self.output_path_edit.text())
-        epsg = self.crs_selector.crs().postgisSrid()
-
-        # Create service-specific output directory
-        service_output_dir = output_dir / service_name.replace('/', '_')
-        self.service_output_dir = service_output_dir  # Store for COG creation
-
-        # Update UI
-        self.download_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(True)
-        self.progress_bar.setValue(0)
-        self.status_label.setText(self.tr('Starting download...'))
-
-        # Create download task
-        self.download_task = TileDownloadTask(
-            service_url=service_url,
-            service_name=service_name,
-            output_dir=service_output_dir,
-            bbox=bbox,
-            epsg=epsg,
-            max_retry=self.settings.get_max_retry()
-        )
-
-        # Connect signals
-        self.download_task.progressChanged.connect(self._on_download_progress)
-        self.download_task.downloadComplete.connect(self._on_download_complete)
-        self.download_task.downloadFailed.connect(self._on_download_failed)
-        self.download_task.taskCompleted.connect(lambda: setattr(self, 'download_task', None))
-        self.download_task.taskTerminated.connect(lambda: setattr(self, 'download_task', None))
-
-        # Add to task manager
-        QgsApplication.taskManager().addTask(self.download_task)
-
-        log(f'Starting download for service: {service_name}')
-
-    def _cancel_download(self):
-        if self.download_task:
-            try:
-                self.download_task.cancel()
-            except RuntimeError:
-                pass
-
-        if self.processing_task:
-            try:
-                self.processing_task.cancel()
-            except RuntimeError:
-                pass
-
-    def _on_download_progress(self, progress: float):
-        self.progress_bar.setValue(int(progress))
-        self.status_label.setText(self.tr('Downloading tiles... {progress}%').format(progress=int(progress)))
-
-    def _on_download_complete(self, tile_files: list):
-        self.download_task = None
-        log(f'Download complete: {len(tile_files)} tiles downloaded')
-        self.status_label.setText(self.tr('Download complete: {count} tiles').format(count=len(tile_files)))
-
-        # Get selected output format
-        output_format = self.output_format_group.checkedId()
-
-        # 0 = tiles only, 1 = uncompressed, 2 = compressed
-        if output_format == 0:
-            self._finish_processing(tile_files)
-        elif output_format in [1, 2] and tile_files:
-            # Start merge processing
-            self._start_cog_processing(tile_files, output_format)
-        else:
-            self._finish_processing(tile_files)
-
-    def _on_download_failed(self, error: str):
-        self.download_task = None
-        log(f'Download failed: {error}', Qgis.Critical)
-        self.status_label.setText(self.tr('Download failed: {error}').format(error=error))
-        self.progress_bar.setValue(0)
-        self.download_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
-
-        QMessageBox.critical(
-            self,
-            self.tr('Download Failed'),
-            self.tr('Failed to download tiles:\n\n{error}').format(error=error)
-        )
-
-    def _start_cog_processing(self, tile_files: list, output_format: int):
-        format_names = {1: self.tr('uncompressed'), 2: self.tr('compressed')}
-        format_name = format_names.get(output_format, self.tr('merged'))
-
-        self.status_label.setText(self.tr('Creating {format} GeoTIFF...').format(format=format_name))
-        self.progress_bar.setValue(0)
-
-        # Save merged file in the same folder as the tiles
-        if not self.service_output_dir:
-            log('Error: service output directory not set', Qgis.Critical)
-            return
-
-        # Generate meaningful filename: servicename_merged_YYYYMMDD_HHMMSS.tif
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        folder_name = self.service_output_dir.name
-        output_filename = f'{folder_name}_merged_{timestamp}.tif'
-        output_cog = self.service_output_dir / output_filename
-
-        epsg = self.crs_selector.crs().postgisSrid()
-
-        # Create processing task
-        self.processing_task = COGProcessingTask(
-            tile_files=[Path(f) for f in tile_files],
-            output_cog=output_cog,
-            epsg=epsg,
-            output_format=output_format
-        )
-
-        # Connect signals
-        self.processing_task.progressChanged.connect(self._on_processing_progress)
-        self.processing_task.processingComplete.connect(self._on_processing_complete)
-        self.processing_task.processingFailed.connect(self._on_processing_failed)
-        self.processing_task.taskCompleted.connect(lambda: setattr(self, 'processing_task', None))
-        self.processing_task.taskTerminated.connect(lambda: setattr(self, 'processing_task', None))
-
-        # Add to task manager
-        QgsApplication.taskManager().addTask(self.processing_task)
-
-    def _on_processing_progress(self, progress: float):
-        self.progress_bar.setValue(int(progress))
-        self.status_label.setText(self.tr('Creating COG... {progress}%').format(progress=int(progress)))
-
-    def _on_processing_complete(self, output_file: str):
-        self.processing_task = None
-        log(f'COG creation complete: {output_file}')
-        self.status_label.setText(self.tr('Processing complete'))
-        self.progress_bar.setValue(100)
-
-        self._finish_processing([output_file])
-
-    def _on_processing_failed(self, error: str):
-        self.processing_task = None
-        log(f'COG processing failed: {error}', Qgis.Critical)
-        self.status_label.setText(self.tr('Processing failed: {error}').format(error=error))
-        self.progress_bar.setValue(0)
-        self.download_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
-
-        QMessageBox.critical(
-            self,
-            self.tr('Processing Failed'),
-            self.tr('Failed to create COG:\n\n{error}').format(error=error)
-        )
-
-    def _finish_processing(self, output_files: list):
-        # Reset UI
-        self.download_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
-        self.progress_bar.setValue(100)
-        self.status_label.setText(self.tr('Complete!'))
-
-        # Add to canvas if requested
-        if self.add_to_canvas_checkbox.isChecked() and output_files:
-            for output_file in output_files:
-                output_path = Path(output_file)
-                if output_path.exists() and output_path.suffix.lower() in ['.tif', '.tiff']:
-                    layer_name = output_path.stem
-                    layer = QgsRasterLayer(str(output_path), layer_name)
-                    if layer.isValid():
-                        QgsProject.instance().addMapLayer(layer)
-                        self.iface.messageBar().pushMessage(
-                            self.tr('Success'),
-                            self.tr('Added layer: {name}').format(name=layer_name),
-                            level=Qgis.Success,
-                            duration=3
-                        )
-                    else:
-                        log(f'Failed to load layer: {output_path}', Qgis.Warning)
-                        log(f'Layer error: {layer.error().message()}', Qgis.Warning)
-                elif not output_path.exists():
-                    log(f'Output file does not exist: {output_path}', Qgis.Warning)
-
-        # Show completion message with file location
-        if output_files:
-            completion_msg = self.tr('Download and processing completed successfully!\n\nOutput saved to:\n{path}').format(path=output_files[0])
-        else:
-            completion_msg = self.tr('Download and processing completed successfully!')
-
-        QMessageBox.information(
-            self,
-            self.tr('Complete'),
-            completion_msg
-        )
 
     def closeEvent(self, event):
         # Deactivate and clean up bbox tool
