@@ -120,7 +120,11 @@ class TileDownloadTask(QgsTask):
                         tile_id
                     )
 
-                    tile_filepath = tile_info['rasterFiles'][0]['id']
+                    raster_files = tile_info.get('rasterFiles', [])
+                    if not raster_files:
+                        self._log(f'No rasterFiles for tile {tile_id}, skipping', Qgis.Warning)
+                        continue
+                    tile_filepath = raster_files[0]['id']
                     filename = tile_filepath.split("\\")[-1]
 
                     # Skip overview tiles

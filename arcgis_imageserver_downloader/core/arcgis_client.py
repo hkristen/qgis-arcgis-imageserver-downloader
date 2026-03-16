@@ -2,9 +2,9 @@
 ArcGIS REST API client using Qt networking
 """
 import json
+import re
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from qgis.PyQt.QtCore import QUrl, QUrlQuery
 from qgis.core import (
@@ -133,46 +133,6 @@ class ArcGISClient:
         error_msg = blocking_request.reply().errorString() if blocking_request.reply() else "Unknown error"
         raise RuntimeError(f"File download failed after {max_retry} attempts: {error_msg}")
 
-    def _check_service_capabilities(self, base_url: str, service_name: str) -> bool:
-        """Check if a service supports required operations.
-
-        Args:
-            base_url: Base URL of the ArcGIS REST endpoint
-            service_name: Name of the service to check
-
-        Returns:
-            True if service supports Query and Download operations
-        """
-        try:
-            image_server_url = f"{base_url}/{service_name}/ImageServer"
-            params = {'f': 'json'}
-            metadata = self._make_request(image_server_url, params, max_retry=1)
-
-            # Check if there's an error that indicates the service doesn't support operations
-            if 'error' in metadata:
-                error = metadata.get('error', {})
-                error_msg = error.get('message', '').lower()
-                # Only filter out if it's explicitly about unsupported operations
-                if 'not supported' in error_msg or 'operation' in error_msg:
-                    return False
-                # For other errors, still allow the service through (user can see error later)
-                return True
-
-            # If we got valid metadata back, the service is accessible
-            # Most ImageServers support Query and Download by default even if not explicitly listed
-            # Check if it has basic ImageServer properties
-            if 'name' in metadata or 'pixelType' in metadata or 'extent' in metadata:
-                return True
-
-            # If no clear indicators, be permissive and include it
-            return True
-
-        except Exception as e:
-            # On network/timeout errors, include the service (user can try later)
-            # This avoids filtering out services due to temporary network issues
-            self._log(f'Could not check capabilities for {service_name}, including anyway: {e}', Qgis.Info)
-            return True
-
     def get_services(self, base_url: str) -> List[Dict]:
         """Fetch services from ArcGIS REST endpoint.
 
@@ -212,36 +172,10 @@ class ArcGISClient:
             self._log('No ImageServer services found')
             return []
 
-        self._log(f'Checking capabilities for {len(imageserver_services)} ImageServer services in parallel...')
-
-        # Check capabilities in parallel for speed
-        capability_results = {}
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            # Submit all capability checks
-            future_to_service = {
-                executor.submit(self._check_service_capabilities, base_url, service.get('name', '')): service
-                for service in imageserver_services
-            }
-
-            # Collect results as they complete
-            for future in as_completed(future_to_service):
-                service = future_to_service[future]
-                name = service.get('name', '')
-                try:
-                    capability_results[name] = future.result()
-                except Exception as e:
-                    self._log(f'Error checking {name}: {e}', Qgis.Warning)
-                    capability_results[name] = True  # Include on error
-
         # Parse service information
         parsed_services = []
         for service in imageserver_services:
             name = service.get('name', '')
-
-            # Check if service supports required operations
-            if not capability_results.get(name, False):
-                self._log(f'Skipping service without required capabilities: {name}', Qgis.Info)
-                continue
 
             parsed = {
                 'name': name,
@@ -260,7 +194,6 @@ class ArcGISClient:
                 parsed['service_name'] = name
 
             # Extract year from service name (4 digits)
-            import re
             year_match = re.search(r'(\d{4})', parsed['service_name'])
             if year_match:
                 parsed['year'] = year_match.group(1)

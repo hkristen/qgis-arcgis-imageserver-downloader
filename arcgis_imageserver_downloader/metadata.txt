@@ -1,6 +1,6 @@
 [general]
 name=ArcGIS ImageServer Downloader
-qgisMinimumVersion=3.40
+qgisMinimumVersion=3.28
 description=Download raster tiles from ArcGIS ImageServer REST services and create Cloud Optimized GeoTIFFs (COGs)
 version=0.1.0
 author=Harald Kristen
@@ -16,6 +16,7 @@ homepage=https://github.com/hkristen/qgis-arcgis-imageserver-downloader
 category=Raster
 icon=icon.svg
 
+hasProcessingProvider=yes
 experimental=True
 deprecated=False
 

@@ -133,7 +133,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.settings = PluginSettings()
 
         # Load custom servers
-        custom_servers_path = Path.home() / '.qgis' / 'arcgis_imageserver_custom_servers.json'
+        custom_servers_path = Path(QgsApplication.qgisSettingsDirPath()) / 'arcgis_imageserver_custom_servers.json'
         if custom_servers_path.exists():
             self.service_manager.load_custom_servers(custom_servers_path)
 
@@ -187,7 +187,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.add_server_btn.clicked.connect(self._add_custom_server)
         server_select_layout.addWidget(self.add_server_btn)
 
-        self.edit_server_btn = QPushButton('✎')
+        self.edit_server_btn = QPushButton(self.tr('Edit'))
         self.edit_server_btn.setMaximumWidth(30)
         self.edit_server_btn.setToolTip(self.tr('Edit or copy server settings'))
         self.edit_server_btn.clicked.connect(self._edit_server)
@@ -634,7 +634,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                 self.service_manager.add_custom_server(preset)
 
                 # Save custom servers
-                custom_servers_path = Path.home() / '.qgis' / 'arcgis_imageserver_custom_servers.json'
+                custom_servers_path = Path(QgsApplication.qgisSettingsDirPath()) / 'arcgis_imageserver_custom_servers.json'
                 self.service_manager.save_custom_servers(custom_servers_path)
 
                 # Refresh combo
@@ -695,7 +695,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                     self.current_preset = new_preset
 
                 # Save custom servers
-                custom_servers_path = Path.home() / '.qgis' / 'arcgis_imageserver_custom_servers.json'
+                custom_servers_path = Path(QgsApplication.qgisSettingsDirPath()) / 'arcgis_imageserver_custom_servers.json'
                 self.service_manager.save_custom_servers(custom_servers_path)
 
                 # Refresh combo

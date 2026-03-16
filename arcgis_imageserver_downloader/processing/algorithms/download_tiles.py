@@ -185,7 +185,11 @@ Example:
                 try:
                     # Get tile info
                     tile_info = client.get_tile_info(url, service_name, tile_id)
-                    tile_filepath = tile_info['rasterFiles'][0]['id']
+                    raster_files = tile_info.get('rasterFiles', [])
+                    if not raster_files:
+                        feedback.pushWarning(f'  No rasterFiles for tile {tile_id}, skipping')
+                        continue
+                    tile_filepath = raster_files[0]['id']
                     filename = tile_filepath.split("\\")[-1]
 
                     # Skip overview tiles
