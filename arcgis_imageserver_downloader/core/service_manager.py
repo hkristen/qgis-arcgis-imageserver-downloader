@@ -5,7 +5,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from qgis.core import QgsMessageLog, Qgis
+from qgis.core import Qgis
+
+from ..utils import log
 
 
 class ServicePreset:
@@ -68,10 +70,6 @@ class ServiceManager:
         if plugin_dir:
             self._load_builtin_presets()
 
-    def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
-        """Log message to QGIS message log."""
-        QgsMessageLog.logMessage(message, 'ArcGIS ImageServer Downloader', level)
-
     def _load_builtin_presets(self):
         """Load built-in preset configurations from JSON files."""
         if not self.plugin_dir:
@@ -95,10 +93,10 @@ class ServiceManager:
                     preset = ServicePreset.from_dict(data)
                     self._presets[preset.name] = preset
 
-                self._log(f"Loaded preset from {preset_file.name}")
+                log(f"Loaded preset from {preset_file.name}")
 
             except Exception as e:
-                self._log(f"Failed to load preset from {preset_file}: {e}", Qgis.Warning)
+                log(f"Failed to load preset from {preset_file}: {e}", Qgis.Warning)
 
     def get_preset(self, name: str) -> Optional[ServicePreset]:
         """Get preset by name.
@@ -191,7 +189,7 @@ class ServiceManager:
                 data = json.load(f)
 
             self._custom_servers = [ServicePreset.from_dict(item) for item in data]
-            self._log(f"Loaded {len(self._custom_servers)} custom servers")
+            log(f"Loaded {len(self._custom_servers)} custom servers")
 
         except Exception as e:
-            self._log(f"Failed to load custom servers: {e}", Qgis.Warning)
+            log(f"Failed to load custom servers: {e}", Qgis.Warning)

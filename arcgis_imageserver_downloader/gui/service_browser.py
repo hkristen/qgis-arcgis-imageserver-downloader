@@ -17,9 +17,10 @@ from qgis.PyQt.QtWidgets import (
     QHeaderView,
     QMessageBox
 )
-from qgis.core import QgsMessageLog, Qgis, QgsTask, QgsApplication
+from qgis.core import Qgis, QgsTask, QgsApplication
 
 from ..core.arcgis_client import ArcGISClient
+from ..utils import log
 
 
 class ServiceFetchTask(QgsTask):
@@ -48,11 +49,7 @@ class ServiceFetchTask(QgsTask):
             return True
         except Exception as e:
             self.error_message = str(e)
-            QgsMessageLog.logMessage(
-                f'Failed to fetch services: {e}',
-                'ArcGIS ImageServer Downloader',
-                Qgis.Critical
-            )
+            log(f'Failed to fetch services: {e}', Qgis.Critical)
             return False
 
 
@@ -178,11 +175,7 @@ class ServiceBrowserWidget(QWidget):
             except RuntimeError:
                 # Task object has been deleted by Qt
                 self.status_label.setText(self.tr('Failed to load services'))
-                QgsMessageLog.logMessage(
-                    'Task object was deleted before completion handler',
-                    'ArcGIS ImageServer Downloader',
-                    Qgis.Warning
-                )
+                log('Task object was deleted before completion handler', Qgis.Warning)
 
     def _on_fetch_failed(self):
         """Handle failed service fetch."""

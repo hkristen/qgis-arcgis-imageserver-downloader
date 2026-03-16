@@ -33,9 +33,10 @@ from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsApplication,
-    QgsMessageLog,
     Qgis
 )
+
+from ..utils import log
 
 from ..core.service_manager import ServiceManager, ServicePreset
 from ..core.settings import PluginSettings
@@ -165,10 +166,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             Translated string
         """
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
-
-    def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
-        """Log message to QGIS message log."""
-        QgsMessageLog.logMessage(message, 'ArcGIS ImageServer Downloader', level)
 
     def _init_ui(self):
         """Initialize the user interface."""
@@ -449,7 +446,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         preset = self.server_combo.itemData(index)
         if preset:
             self.current_preset = preset
-            self._log(f'Selected server: {preset.name}')
+            log(f'Selected server: {preset.name}')
 
             # Update CRS if different
             if preset.default_epsg:
@@ -474,7 +471,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             service: Service information dictionary
         """
         self.selected_service = service
-        self._log(f'Selected service: {service.get("name", "Unknown")}')
+        log(f'Selected service: {service.get("name", "Unknown")}')
 
     def _on_bbox_method_changed(self, checked: bool):
         """Handle bbox selection method change.
@@ -506,7 +503,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             self.bbox_tool.bboxDrawn.connect(self._on_bbox_drawn)
 
         self.canvas.setMapTool(self.bbox_tool)
-        self._log('Bbox drawing tool activated - draw a rectangle on the map')
+        log('Bbox drawing tool activated - draw a rectangle on the map')
 
     def _deactivate_bbox_tool(self):
         """Deactivate bbox drawing tool."""
@@ -536,7 +533,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         self.bbox = rect
         self._update_bbox_label()
-        self._log(f'Bbox selected: {rect.asWktPolygon()}')
+        log(f'Bbox selected: {rect.asWktPolygon()}')
 
     def _update_bbox_from_layer(self):
         """Update bbox from active layer extent."""
@@ -566,7 +563,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         self.bbox = extent
         self._update_bbox_label()
-        self._log(f'Bbox from layer: {extent.asWktPolygon()}')
+        log(f'Bbox from layer: {extent.asWktPolygon()}')
 
     def _update_bbox_label(self):
         """Update bbox display label."""
@@ -823,7 +820,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         # Add to task manager
         QgsApplication.taskManager().addTask(self.download_task)
 
-        self._log(f'Starting download for service: {service_name}')
+        log(f'Starting download for service: {service_name}')
 
     def _cancel_download(self):
         """Cancel the current download."""
@@ -855,7 +852,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             tile_files: List of downloaded tile file paths
         """
         self.download_task = None
-        self._log(f'Download complete: {len(tile_files)} tiles downloaded')
+        log(f'Download complete: {len(tile_files)} tiles downloaded')
         self.status_label.setText(self.tr('Download complete: {count} tiles').format(count=len(tile_files)))
 
         # Get selected output format
@@ -864,7 +861,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         # 0 = tiles only, 1 = uncompressed, 2 = compressed
         if output_format == 0:
             # Tiles only - no merge
-            self._log('Tiles only mode - skipping merge')
+            log('Tiles only mode - skipping merge')
             self._finish_processing(tile_files)
         elif output_format in [1, 2] and tile_files:
             # Start merge processing
@@ -879,7 +876,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             error: Error message
         """
         self.download_task = None
-        self._log(f'Download failed: {error}', Qgis.Critical)
+        log(f'Download failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Download failed: {error}').format(error=error))
         self.progress_bar.setValue(0)
         self.download_btn.setEnabled(True)
@@ -906,7 +903,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         # Save merged file in the same folder as the tiles
         if not self.service_output_dir:
-            self._log('Error: service output directory not set', Qgis.Critical)
+            log('Error: service output directory not set', Qgis.Critical)
             return
 
         # Generate meaningful filename: servicename_merged_YYYYMMDD_HHMMSS.tif
@@ -916,7 +913,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         output_filename = f'{folder_name}_merged_{timestamp}.tif'
         output_cog = self.service_output_dir / output_filename
 
-        self._log(f'Output will be saved to: {output_cog}')
+        log(f'Output will be saved to: {output_cog}')
 
         epsg = self.crs_selector.crs().postgisSrid()
 
@@ -938,7 +935,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         # Add to task manager
         QgsApplication.taskManager().addTask(self.processing_task)
 
-        self._log(f'Starting {format_name} GeoTIFF creation')
+        log(f'Starting {format_name} GeoTIFF creation')
 
     def _on_processing_progress(self, progress: float):
         """Handle processing progress update.
@@ -956,7 +953,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             output_file: Path to output COG file
         """
         self.processing_task = None
-        self._log(f'COG creation complete: {output_file}')
+        log(f'COG creation complete: {output_file}')
         self.status_label.setText(self.tr('Processing complete'))
         self.progress_bar.setValue(100)
 
@@ -969,7 +966,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             error: Error message
         """
         self.processing_task = None
-        self._log(f'COG processing failed: {error}', Qgis.Critical)
+        log(f'COG processing failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Processing failed: {error}').format(error=error))
         self.progress_bar.setValue(0)
         self.download_btn.setEnabled(True)
@@ -993,25 +990,25 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.progress_bar.setValue(100)
         self.status_label.setText(self.tr('Complete!'))
 
-        self._log(f'Finishing processing with {len(output_files)} output file(s)')
+        log(f'Finishing processing with {len(output_files)} output file(s)')
 
         # Add to canvas if requested
         if self.add_to_canvas_checkbox.isChecked() and output_files:
-            self._log(f'Add to canvas is enabled, processing {len(output_files)} files')
+            log(f'Add to canvas is enabled, processing {len(output_files)} files')
             for output_file in output_files:
                 output_path = Path(output_file)
-                self._log(f'Checking output file: {output_path}')
-                self._log(f'File exists: {output_path.exists()}')
+                log(f'Checking output file: {output_path}')
+                log(f'File exists: {output_path.exists()}')
 
                 if output_path.exists() and output_path.suffix.lower() in ['.tif', '.tiff']:
                     # Create raster layer
                     layer_name = output_path.stem
-                    self._log(f'Creating raster layer: {layer_name}')
+                    log(f'Creating raster layer: {layer_name}')
                     layer = QgsRasterLayer(str(output_path), layer_name)
 
                     if layer.isValid():
                         QgsProject.instance().addMapLayer(layer)
-                        self._log(f'Added layer to canvas: {layer_name}')
+                        log(f'Added layer to canvas: {layer_name}')
                         self.iface.messageBar().pushMessage(
                             self.tr('Success'),
                             self.tr('Added layer: {name}').format(name=layer_name),
@@ -1019,18 +1016,18 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                             duration=3
                         )
                     else:
-                        self._log(f'Failed to load layer: {output_path}', Qgis.Warning)
-                        self._log(f'Layer error: {layer.error().message()}', Qgis.Warning)
+                        log(f'Failed to load layer: {output_path}', Qgis.Warning)
+                        log(f'Layer error: {layer.error().message()}', Qgis.Warning)
                 else:
                     if not output_path.exists():
-                        self._log(f'Output file does not exist: {output_path}', Qgis.Warning)
+                        log(f'Output file does not exist: {output_path}', Qgis.Warning)
                     else:
-                        self._log(f'Skipping non-TIFF file: {output_path}', Qgis.Info)
+                        log(f'Skipping non-TIFF file: {output_path}', Qgis.Info)
         else:
             if not self.add_to_canvas_checkbox.isChecked():
-                self._log('Add to canvas is disabled')
+                log('Add to canvas is disabled')
             if not output_files:
-                self._log('No output files to add')
+                log('No output files to add')
 
         # Show completion message with file location
         if output_files:

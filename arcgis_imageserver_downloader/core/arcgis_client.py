@@ -9,10 +9,9 @@ import urllib.error
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
-from qgis.core import (
-    QgsMessageLog,
-    Qgis
-)
+from qgis.core import Qgis
+
+from ..utils import log
 
 
 class ArcGISClient:
@@ -21,10 +20,6 @@ class ArcGISClient:
     def __init__(self):
         """Initialize the ArcGIS client."""
         pass
-
-    def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
-        """Log message to QGIS message log."""
-        QgsMessageLog.logMessage(message, 'ArcGIS ImageServer Downloader', level)
 
     def _make_request(
         self,
@@ -66,7 +61,7 @@ class ArcGISClient:
             except urllib.error.URLError as e:
                 last_error = e
                 if attempt < max_retry - 1:
-                    self._log(f"Request failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
+                    log(f"Request failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
 
         raise RuntimeError(f"Network request failed after {max_retry} attempts: {last_error}")
 
@@ -121,7 +116,7 @@ class ArcGISClient:
             except urllib.error.URLError as e:
                 last_error = e
                 if attempt < max_retry - 1:
-                    self._log(f"Download failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
+                    log(f"Download failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
 
         raise RuntimeError(f"File download failed after {max_retry} attempts: {last_error}")
 
@@ -142,7 +137,7 @@ class ArcGISClient:
 
         # If there are folders, recursively fetch services from each folder
         if folders:
-            self._log(f'Found {len(folders)} folders, discovering services recursively...')
+            log(f'Found {len(folders)} folders, discovering services recursively...')
             for folder in folders:
                 # Skip system folders
                 if folder in ['System', 'Utilities']:
@@ -153,15 +148,15 @@ class ArcGISClient:
                     folder_data = self._make_request(folder_url, params)
                     folder_services = folder_data.get('services', [])
                     services.extend(folder_services)
-                    self._log(f'Found {len(folder_services)} services in folder: {folder}')
+                    log(f'Found {len(folder_services)} services in folder: {folder}')
                 except Exception as e:
-                    self._log(f'Failed to fetch services from folder {folder}: {e}', Qgis.Warning)
+                    log(f'Failed to fetch services from folder {folder}: {e}', Qgis.Warning)
 
         # Filter to only ImageServer services
         imageserver_services = [s for s in services if s.get('type', '') == 'ImageServer']
 
         if not imageserver_services:
-            self._log('No ImageServer services found')
+            log('No ImageServer services found')
             return []
 
         # Parse service information
@@ -195,7 +190,7 @@ class ArcGISClient:
         # Sort by category and service_name
         parsed_services.sort(key=lambda x: (x['category'], x['service_name']))
 
-        self._log(f'Total services discovered: {len(parsed_services)}')
+        log(f'Total services discovered: {len(parsed_services)}')
         return parsed_services
 
     def query_tiles(

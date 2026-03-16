@@ -7,11 +7,9 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from qgis.core import (
-    QgsTask,
-    QgsMessageLog,
-    Qgis
-)
+from qgis.core import QgsTask, Qgis
+
+from ..utils import log
 from qgis.PyQt.QtCore import pyqtSignal
 
 
@@ -55,14 +53,6 @@ class COGProcessingTask(QgsTask):
         self.error_message = None
         self.temp_dir = None
 
-    def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
-        """Log message to QGIS message log."""
-        QgsMessageLog.logMessage(
-            message,
-            'ArcGIS ImageServer Downloader',
-            level
-        )
-
     def run(self):
         """Execute COG creation.
 
@@ -74,7 +64,7 @@ class COGProcessingTask(QgsTask):
                 self.error_message = 'No tile files provided'
                 return False
 
-            self._log(f'Creating merged GeoTIFF from {len(self.tile_files)} tiles...')
+            log(f'Creating merged GeoTIFF from {len(self.tile_files)} tiles...')
 
             # Create temporary directory
             self.temp_dir = tempfile.mkdtemp()
@@ -82,7 +72,7 @@ class COGProcessingTask(QgsTask):
             temp_warped_vrt = str(Path(self.temp_dir) / 'temp_warped.vrt')
 
             # Step 1: Build VRT
-            self._log('Building virtual raster...')
+            log('Building virtual raster...')
             self.setProgress(0)
 
             try:
@@ -94,14 +84,14 @@ class COGProcessingTask(QgsTask):
                 )
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdalbuildvrt failed: {e.stderr}'
-                self._log(self.error_message, Qgis.Critical)
+                log(self.error_message, Qgis.Critical)
                 return False
 
             if self.isCanceled():
                 return False
 
             # Step 2: Warp to target EPSG
-            self._log(f'Warping to EPSG:{self.epsg}...')
+            log(f'Warping to EPSG:{self.epsg}...')
             self.setProgress(33)
 
             try:
@@ -113,7 +103,7 @@ class COGProcessingTask(QgsTask):
                 )
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdalwarp failed: {e.stderr}'
-                self._log(self.error_message, Qgis.Critical)
+                log(self.error_message, Qgis.Critical)
                 return False
 
             if self.isCanceled():
@@ -122,7 +112,7 @@ class COGProcessingTask(QgsTask):
             # Step 3: Create output GeoTIFF based on format selection
             format_names = {1: 'uncompressed', 2: 'compressed'}
             format_name = format_names.get(self.output_format, 'compressed')
-            self._log(f'Creating {format_name} GeoTIFF...')
+            log(f'Creating {format_name} GeoTIFF...')
             self.setProgress(66)
 
             # Ensure output directory exists
@@ -130,7 +120,7 @@ class COGProcessingTask(QgsTask):
 
             if not Path(temp_warped_vrt).exists():
                 self.error_message = f'Input VRT not found: {temp_warped_vrt}'
-                self._log(self.error_message, Qgis.Critical)
+                log(self.error_message, Qgis.Critical)
                 return False
 
             if self.output_format == 1:
@@ -160,7 +150,7 @@ class COGProcessingTask(QgsTask):
                 )
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdal_translate failed: {e.stderr}'
-                self._log(self.error_message, Qgis.Critical)
+                log(self.error_message, Qgis.Critical)
                 return False
 
             if self.isCanceled():
@@ -168,7 +158,7 @@ class COGProcessingTask(QgsTask):
 
             # Step 4: Add overviews for better performance (only for compressed format)
             if self.output_format == 2 and self.output_cog.exists():
-                self._log('Adding overviews...')
+                log('Adding overviews...')
                 self.setProgress(85)
 
                 try:
@@ -178,13 +168,13 @@ class COGProcessingTask(QgsTask):
                         capture_output=True,
                         text=True
                     )
-                    self._log('Overviews added successfully')
+                    log('Overviews added successfully')
                 except subprocess.CalledProcessError as e:
                     # Overviews are nice to have but not critical
-                    self._log(f'Failed to add overviews (non-critical): {e.stderr}', Qgis.Warning)
+                    log(f'Failed to add overviews (non-critical): {e.stderr}', Qgis.Warning)
             else:
                 # Skip overviews for uncompressed format
-                self._log('Skipping overviews (uncompressed format)')
+                log('Skipping overviews (uncompressed format)')
                 self.setProgress(85)
 
             if self.isCanceled():
@@ -193,12 +183,12 @@ class COGProcessingTask(QgsTask):
             self.setProgress(100)
 
             file_size = self.output_cog.stat().st_size / (1024 * 1024)  # MB
-            self._log(f'Successfully created COG: {self.output_cog} ({file_size:.2f} MB)')
+            log(f'Successfully created COG: {self.output_cog} ({file_size:.2f} MB)')
             return True
 
         except Exception as e:
             self.error_message = str(e)
-            self._log(f'COG processing failed: {str(e)}', Qgis.Critical)
+            log(f'COG processing failed: {str(e)}', Qgis.Critical)
             return False
 
         finally:
@@ -206,9 +196,9 @@ class COGProcessingTask(QgsTask):
             if self.temp_dir:
                 try:
                     shutil.rmtree(self.temp_dir)
-                    self._log('Cleaned up temporary files')
+                    log('Cleaned up temporary files')
                 except Exception as e:
-                    self._log(f'Warning: Could not remove temporary files: {e}', Qgis.Warning)
+                    log(f'Warning: Could not remove temporary files: {e}', Qgis.Warning)
 
     def finished(self, result: bool):
         """Called when task finishes.
@@ -217,14 +207,14 @@ class COGProcessingTask(QgsTask):
             result: True if task completed successfully
         """
         if result:
-            self._log(f'COG processing complete: {self.output_cog}')
+            log(f'COG processing complete: {self.output_cog}')
             self.processingComplete.emit(str(self.output_cog))
         else:
             error = self.error_message or 'Unknown error'
-            self._log(f'COG processing failed: {error}', Qgis.Critical)
+            log(f'COG processing failed: {error}', Qgis.Critical)
             self.processingFailed.emit(error)
 
     def cancel(self):
         """Cancel the task."""
-        self._log('Cancelling COG processing task...', Qgis.Warning)
+        log('Cancelling COG processing task...', Qgis.Warning)
         super().cancel()

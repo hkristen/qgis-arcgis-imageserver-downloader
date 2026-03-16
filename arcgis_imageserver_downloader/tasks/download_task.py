@@ -4,7 +4,9 @@ QgsTask for downloading raster tiles in background
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from qgis.core import QgsTask, QgsMessageLog, Qgis
+from qgis.core import QgsTask, Qgis
+
+from ..utils import log
 from qgis.PyQt.QtCore import pyqtSignal
 
 from ..core.arcgis_client import ArcGISClient
@@ -54,14 +56,6 @@ class TileDownloadTask(QgsTask):
         self.client = None
         self.tile_ids = []
 
-    def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
-        """Log message to QGIS message log."""
-        QgsMessageLog.logMessage(
-            message,
-            'ArcGIS ImageServer Downloader',
-            level
-        )
-
     def run(self):
         """Execute the download task.
 
@@ -75,7 +69,7 @@ class TileDownloadTask(QgsTask):
             self.client = ArcGISClient()
 
             # Query tiles
-            self._log(f'Querying tiles from {self.service_name}...')
+            log(f'Querying tiles from {self.service_name}...')
             self.setProgress(0)
 
             self.tile_ids = self.client.query_tiles(
@@ -90,7 +84,7 @@ class TileDownloadTask(QgsTask):
                 self.error_message = 'No tiles found matching the query'
                 return False
 
-            self._log(f'Found {len(self.tile_ids)} tiles to download')
+            log(f'Found {len(self.tile_ids)} tiles to download')
 
             # Download service metadata
             metadata_path = self.output_dir / f'{self.service_name.replace("/", "_")}.json'
@@ -104,7 +98,7 @@ class TileDownloadTask(QgsTask):
             total_tiles = len(self.tile_ids)
             for i, tile_id in enumerate(self.tile_ids):
                 if self.isCanceled():
-                    self._log('Download cancelled by user', Qgis.Warning)
+                    log('Download cancelled by user', Qgis.Warning)
                     return False
 
                 # Update progress
@@ -121,7 +115,7 @@ class TileDownloadTask(QgsTask):
 
                     raster_files = tile_info.get('rasterFiles', [])
                     if not raster_files:
-                        self._log(f'No rasterFiles for tile {tile_id}, skipping', Qgis.Warning)
+                        log(f'No rasterFiles for tile {tile_id}, skipping', Qgis.Warning)
                         continue
                     tile_filepath = raster_files[0]['id']
                     filename = tile_filepath.split("\\")[-1]
@@ -137,7 +131,7 @@ class TileDownloadTask(QgsTask):
                     )
 
                     self.downloaded_files.append(str(output_path))
-                    self._log(f'Downloaded {i+1}/{total_tiles}: {filename}')
+                    log(f'Downloaded {i+1}/{total_tiles}: {filename}')
 
                     # Download tile metadata
                     metadata_path = self.output_dir / f'{output_path.stem}.json'
@@ -149,22 +143,22 @@ class TileDownloadTask(QgsTask):
                     )
 
                 except ValueError as e:
-                    self._log(str(e))
+                    log(str(e))
                     continue
                 except Exception as e:
-                    self._log(
+                    log(
                         f'Failed to download tile {tile_id}: {str(e)}',
                         Qgis.Warning
                     )
                     continue
 
             self.setProgress(100)
-            self._log(f'Successfully downloaded {len(self.downloaded_files)} tiles')
+            log(f'Successfully downloaded {len(self.downloaded_files)} tiles')
             return True
 
         except Exception as e:
             self.error_message = str(e)
-            self._log(f'Download task failed: {str(e)}', Qgis.Critical)
+            log(f'Download task failed: {str(e)}', Qgis.Critical)
             return False
 
     def finished(self, result: bool):
@@ -174,14 +168,14 @@ class TileDownloadTask(QgsTask):
             result: True if task completed successfully
         """
         if result:
-            self._log(f'Download complete: {len(self.downloaded_files)} files')
+            log(f'Download complete: {len(self.downloaded_files)} files')
             self.downloadComplete.emit(self.downloaded_files)
         else:
             error = self.error_message or 'Unknown error'
-            self._log(f'Download failed: {error}', Qgis.Critical)
+            log(f'Download failed: {error}', Qgis.Critical)
             self.downloadFailed.emit(error)
 
     def cancel(self):
         """Cancel the task."""
-        self._log('Cancelling download task...', Qgis.Warning)
+        log('Cancelling download task...', Qgis.Warning)
         super().cancel()
