@@ -40,16 +40,13 @@ class ArcGISImageServerDownloaderPlugin:
             QCoreApplication.installTranslator(self.translator)
 
     def tr(self, message):
-        """Get the translation for a string using Qt translation API."""
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def initProcessing(self):
-        """Initialize Processing provider."""
         self.provider = ArcGISImageServerProvider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 
     def initGui(self):
-        """Create the menu entries and toolbar icons inside the QGIS GUI."""
         # Initialize processing provider
         self.initProcessing()
 
@@ -63,7 +60,6 @@ class ArcGISImageServerDownloaderPlugin:
         )
 
     def unload(self):
-        """Removes the plugin menu item and icon from QGIS GUI."""
         # Remove processing provider
         if self.provider is not None:
             QgsApplication.processingRegistry().removeProvider(self.provider)
@@ -95,7 +91,6 @@ class ArcGISImageServerDownloaderPlugin:
         whats_this=None,
         parent=None
     ):
-        """Add a toolbar icon to the toolbar."""
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
         action.triggered.connect(callback)
@@ -118,7 +113,6 @@ class ArcGISImageServerDownloaderPlugin:
         return action
 
     def run(self):
-        """Run method that toggles the dock widget."""
         # Import here to avoid circular imports and load GUI only when needed
         from .gui.main_dialog import ArcGISImageServerDockWidget
 

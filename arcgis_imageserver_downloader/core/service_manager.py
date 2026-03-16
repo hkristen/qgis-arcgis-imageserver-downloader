@@ -71,7 +71,6 @@ class ServiceManager:
             self._load_builtin_presets()
 
     def _load_builtin_presets(self):
-        """Load built-in preset configurations from JSON files."""
         if not self.plugin_dir:
             return
 

@@ -32,31 +32,24 @@ class DownloadTilesAlgorithm(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
 
     def __init__(self):
-        """Initialize algorithm."""
         super().__init__()
 
     def tr(self, string):
-        """Get translation for a string."""
         return QCoreApplication.translate(self.__class__.__name__, string)
 
     def createInstance(self):
-        """Create a new instance of the algorithm."""
         return DownloadTilesAlgorithm()
 
     def name(self):
-        """Return algorithm name."""
         return 'download_tiles'
 
     def displayName(self):
-        """Return algorithm display name."""
         return self.tr('Download Raster Tiles')
 
     def group(self):
-        """Return algorithm group."""
         return self.tr('Download')
 
     def groupId(self):
-        """Return algorithm group ID."""
         return 'download'
 
     def shortHelpString(self):

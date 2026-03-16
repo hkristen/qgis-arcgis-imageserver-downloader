@@ -88,14 +88,6 @@ class ServerDialog(QDialog):
         self.setLayout(layout)
 
     def tr(self, message):
-        """Get the translation for a string using the global QGIS locale.
-
-        Args:
-            message: String to be translated
-
-        Returns:
-            Translated string
-        """
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def get_values(self):
@@ -157,18 +149,9 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self._load_settings()
 
     def tr(self, message):
-        """Get the translation for a string using the global QGIS locale.
-
-        Args:
-            message: String to be translated
-
-        Returns:
-            Translated string
-        """
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def _init_ui(self):
-        """Initialize the user interface."""
         # Main widget
         main_widget = QWidget()
         layout = QVBoxLayout()
@@ -365,7 +348,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self._populate_server_combo()
 
     def _populate_server_combo(self):
-        """Populate server combo box with presets and custom servers."""
         self.server_combo.clear()
         self.server_combo.addItem(self.tr('-- Select a server --'), None)
 
@@ -438,11 +420,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.settings.set_add_to_canvas(self.add_to_canvas_checkbox.isChecked())
 
     def _on_server_changed(self, index: int):
-        """Handle server selection change.
-
-        Args:
-            index: Combo box index
-        """
         preset = self.server_combo.itemData(index)
         if preset:
             self.current_preset = preset
@@ -465,20 +442,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             self.service_browser.clear()
 
     def _on_service_selected(self, service: dict):
-        """Handle service selection.
-
-        Args:
-            service: Service information dictionary
-        """
         self.selected_service = service
         log(f'Selected service: {service.get("name", "Unknown")}')
 
     def _on_bbox_method_changed(self, checked: bool):
-        """Handle bbox selection method change.
-
-        Args:
-            checked: True if the radio button is now checked
-        """
         # Only act on the checked signal, not the unchecked signal
         if not checked:
             return
@@ -514,11 +481,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             self.bbox_tool = None
 
     def _on_bbox_drawn(self, rect: QgsRectangle):
-        """Handle bbox drawn on canvas.
-
-        Args:
-            rect: Drawn rectangle
-        """
         # Transform to output CRS if needed
         canvas_crs = self.canvas.mapSettings().destinationCrs()
         output_crs = self.crs_selector.crs()
@@ -536,7 +498,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         log(f'Bbox selected: {rect.asWktPolygon()}')
 
     def _update_bbox_from_layer(self):
-        """Update bbox from active layer extent."""
         layer = self.iface.activeLayer()
         if not layer:
             QMessageBox.warning(
@@ -566,7 +527,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         log(f'Bbox from layer: {extent.asWktPolygon()}')
 
     def _update_bbox_label(self):
-        """Update bbox display label."""
         if self.bbox:
             self.bbox_label.setText(
                 self.tr('Bbox: ({minx:.2f}, {miny:.2f}) - ({maxx:.2f}, {maxy:.2f})').format(
@@ -607,7 +567,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         return None
 
     def _browse_output_dir(self):
-        """Browse for output directory."""
         current_dir = self.output_path_edit.text() or os.path.expanduser('~')
         output_dir = QFileDialog.getExistingDirectory(
             self,
@@ -823,7 +782,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         log(f'Starting download for service: {service_name}')
 
     def _cancel_download(self):
-        """Cancel the current download."""
         if self.download_task:
             try:
                 self.download_task.cancel()
@@ -837,20 +795,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                 pass
 
     def _on_download_progress(self, progress: float):
-        """Handle download progress update.
-
-        Args:
-            progress: Progress percentage (0-100)
-        """
         self.progress_bar.setValue(int(progress))
         self.status_label.setText(self.tr('Downloading tiles... {progress}%').format(progress=int(progress)))
 
     def _on_download_complete(self, tile_files: list):
-        """Handle download completion.
-
-        Args:
-            tile_files: List of downloaded tile file paths
-        """
         self.download_task = None
         log(f'Download complete: {len(tile_files)} tiles downloaded')
         self.status_label.setText(self.tr('Download complete: {count} tiles').format(count=len(tile_files)))
@@ -870,11 +818,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             self._finish_processing(tile_files)
 
     def _on_download_failed(self, error: str):
-        """Handle download failure.
-
-        Args:
-            error: Error message
-        """
         self.download_task = None
         log(f'Download failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Download failed: {error}').format(error=error))
@@ -889,12 +832,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         )
 
     def _start_cog_processing(self, tile_files: list, output_format: int):
-        """Start merge processing.
-
-        Args:
-            tile_files: List of tile file paths
-            output_format: 1=uncompressed, 2=compressed
-        """
         format_names = {1: self.tr('uncompressed'), 2: self.tr('compressed')}
         format_name = format_names.get(output_format, self.tr('merged'))
 
@@ -938,20 +875,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         log(f'Starting {format_name} GeoTIFF creation')
 
     def _on_processing_progress(self, progress: float):
-        """Handle processing progress update.
-
-        Args:
-            progress: Progress percentage (0-100)
-        """
         self.progress_bar.setValue(int(progress))
         self.status_label.setText(self.tr('Creating COG... {progress}%').format(progress=int(progress)))
 
     def _on_processing_complete(self, output_file: str):
-        """Handle processing completion.
-
-        Args:
-            output_file: Path to output COG file
-        """
         self.processing_task = None
         log(f'COG creation complete: {output_file}')
         self.status_label.setText(self.tr('Processing complete'))
@@ -960,11 +887,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self._finish_processing([output_file])
 
     def _on_processing_failed(self, error: str):
-        """Handle processing failure.
-
-        Args:
-            error: Error message
-        """
         self.processing_task = None
         log(f'COG processing failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Processing failed: {error}').format(error=error))
@@ -979,11 +901,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         )
 
     def _finish_processing(self, output_files: list):
-        """Finish processing and add result to canvas.
-
-        Args:
-            output_files: List of output file paths
-        """
         # Reset UI
         self.download_btn.setEnabled(True)
         self.cancel_btn.setEnabled(False)
@@ -1042,11 +959,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         )
 
     def closeEvent(self, event):
-        """Handle widget close event.
-
-        Args:
-            event: Close event
-        """
         # Deactivate and clean up bbox tool
         self._deactivate_bbox_tool()
 

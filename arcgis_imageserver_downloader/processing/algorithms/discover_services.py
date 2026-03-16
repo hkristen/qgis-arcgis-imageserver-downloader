@@ -23,31 +23,24 @@ class DiscoverServicesAlgorithm(QgsProcessingAlgorithm):
     OUTPUT_JSON = 'OUTPUT_JSON'
 
     def __init__(self):
-        """Initialize algorithm."""
         super().__init__()
 
     def tr(self, string):
-        """Get translation for a string."""
         return QCoreApplication.translate(self.__class__.__name__, string)
 
     def createInstance(self):
-        """Create a new instance of the algorithm."""
         return DiscoverServicesAlgorithm()
 
     def name(self):
-        """Return algorithm name."""
         return 'discover_services'
 
     def displayName(self):
-        """Return algorithm display name."""
         return self.tr('Discover ImageServer Services')
 
     def group(self):
-        """Return algorithm group."""
         return self.tr('Service Discovery')
 
     def groupId(self):
-        """Return algorithm group ID."""
         return 'discovery'
 
     def shortHelpString(self):

@@ -27,22 +27,12 @@ class ServiceFetchTask(QgsTask):
     """Background task for fetching services."""
 
     def __init__(self, base_url: str):
-        """Initialize task.
-
-        Args:
-            base_url: ArcGIS REST endpoint URL
-        """
         super().__init__('Fetching services', QgsTask.CanCancel)
         self.base_url = base_url
         self.services = []
         self.error_message = None
 
     def run(self):
-        """Execute the task.
-
-        Returns:
-            True if successful
-        """
         try:
             client = ArcGISClient()
             self.services = client.get_services(self.base_url)
@@ -75,18 +65,9 @@ class ServiceBrowserWidget(QWidget):
         self._init_ui()
 
     def tr(self, message):
-        """Get translation for a string.
-
-        Args:
-            message: String to translate
-
-        Returns:
-            Translated string
-        """
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def _init_ui(self):
-        """Initialize the user interface."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -165,7 +146,6 @@ class ServiceBrowserWidget(QWidget):
         QgsApplication.taskManager().addTask(self.fetch_task)
 
     def _on_fetch_complete(self):
-        """Handle successful service fetch."""
         if self.fetch_task:
             try:
                 self.services = self.fetch_task.services
@@ -178,7 +158,6 @@ class ServiceBrowserWidget(QWidget):
                 log('Task object was deleted before completion handler', Qgis.Warning)
 
     def _on_fetch_failed(self):
-        """Handle failed service fetch."""
         if self.fetch_task:
             try:
                 if self.fetch_task.error_message:
@@ -197,7 +176,6 @@ class ServiceBrowserWidget(QWidget):
             self.status_label.setText(self.tr('Service fetch cancelled'))
 
     def _populate_table(self):
-        """Populate table with filtered services."""
         self.service_table.setSortingEnabled(False)
         self.service_table.setRowCount(len(self.filtered_services))
 
@@ -227,11 +205,6 @@ class ServiceBrowserWidget(QWidget):
         self.service_table.sortItems(0, Qt.AscendingOrder)
 
     def _filter_services(self, text: str):
-        """Filter services based on search text.
-
-        Args:
-            text: Filter text
-        """
         text = text.lower()
 
         if not text:
@@ -250,7 +223,6 @@ class ServiceBrowserWidget(QWidget):
         )
 
     def _on_service_selected(self):
-        """Handle service selection."""
         selected_items = self.service_table.selectedItems()
         if not selected_items:
             return
@@ -267,11 +239,6 @@ class ServiceBrowserWidget(QWidget):
                 self.serviceSelected.emit(service)
 
     def _open_service_metadata(self, service: dict):
-        """Open service metadata page in browser.
-
-        Args:
-            service: Service information dictionary
-        """
         if not self.current_base_url:
             return
 
@@ -304,7 +271,6 @@ class ServiceBrowserWidget(QWidget):
         return None
 
     def clear(self):
-        """Clear the service browser."""
         self.services = []
         self.filtered_services = []
         self.service_table.setRowCount(0)

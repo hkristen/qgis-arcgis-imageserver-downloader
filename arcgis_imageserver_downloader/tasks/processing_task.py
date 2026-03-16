@@ -54,11 +54,6 @@ class COGProcessingTask(QgsTask):
         self.temp_dir = None
 
     def run(self):
-        """Execute COG creation.
-
-        Returns:
-            True if successful, False otherwise
-        """
         try:
             if not self.tile_files:
                 self.error_message = 'No tile files provided'
@@ -201,11 +196,6 @@ class COGProcessingTask(QgsTask):
                     log(f'Warning: Could not remove temporary files: {e}', Qgis.Warning)
 
     def finished(self, result: bool):
-        """Called when task finishes.
-
-        Args:
-            result: True if task completed successfully
-        """
         if result:
             log(f'COG processing complete: {self.output_cog}')
             self.processingComplete.emit(str(self.output_cog))
@@ -215,6 +205,5 @@ class COGProcessingTask(QgsTask):
             self.processingFailed.emit(error)
 
     def cancel(self):
-        """Cancel the task."""
         log('Cancelling COG processing task...', Qgis.Warning)
         super().cancel()

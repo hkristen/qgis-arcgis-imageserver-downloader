@@ -30,31 +30,24 @@ class CreateCOGAlgorithm(QgsProcessingAlgorithm):
     OUTPUT_COG = 'OUTPUT_COG'
 
     def __init__(self):
-        """Initialize algorithm."""
         super().__init__()
 
     def tr(self, string):
-        """Get translation for a string."""
         return QCoreApplication.translate(self.__class__.__name__, string)
 
     def createInstance(self):
-        """Create a new instance of the algorithm."""
         return CreateCOGAlgorithm()
 
     def name(self):
-        """Return algorithm name."""
         return 'create_cog'
 
     def displayName(self):
-        """Return algorithm display name."""
         return self.tr('Create Cloud Optimized GeoTIFF (COG)')
 
     def group(self):
-        """Return algorithm group."""
         return self.tr('Processing')
 
     def groupId(self):
-        """Return algorithm group ID."""
         return 'processing'
 
     def shortHelpString(self):

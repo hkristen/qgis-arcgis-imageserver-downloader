@@ -38,18 +38,12 @@ class BBoxMapTool(QgsMapTool):
         self.setCursor(Qt.CrossCursor)
 
     def _create_rubber_band(self):
-        """Create rubber band for drawing bbox."""
         self.rubber_band = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
         self.rubber_band.setColor(QColor(255, 0, 0, 50))
         self.rubber_band.setFillColor(QColor(255, 0, 0, 30))
         self.rubber_band.setWidth(2)
 
     def canvasPressEvent(self, event):
-        """Handle mouse press event.
-
-        Args:
-            event: QgsMapMouseEvent
-        """
         if event.button() == Qt.LeftButton:
             # Start drawing
             self.start_point = self.toMapCoordinates(event.pos())
@@ -58,11 +52,6 @@ class BBoxMapTool(QgsMapTool):
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def canvasMoveEvent(self, event):
-        """Handle mouse move event.
-
-        Args:
-            event: QgsMapMouseEvent
-        """
         if self.is_drawing and self.start_point:
             # Update end point
             self.end_point = self.toMapCoordinates(event.pos())
@@ -74,11 +63,6 @@ class BBoxMapTool(QgsMapTool):
             self._update_rubber_band(rect)
 
     def canvasReleaseEvent(self, event):
-        """Handle mouse release event.
-
-        Args:
-            event: QgsMapMouseEvent
-        """
         if event.button() == Qt.LeftButton and self.is_drawing:
             # Finish drawing
             self.end_point = self.toMapCoordinates(event.pos())
@@ -95,11 +79,6 @@ class BBoxMapTool(QgsMapTool):
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def _update_rubber_band(self, rect):
-        """Update rubber band geometry.
-
-        Args:
-            rect: QgsRectangle to display
-        """
         if rect.isEmpty():
             return
 
@@ -117,18 +96,12 @@ class BBoxMapTool(QgsMapTool):
         self.rubber_band.setToGeometry(QgsGeometry.fromPolygonXY([points]), None)
 
     def keyPressEvent(self, event):
-        """Handle key press event.
-
-        Args:
-            event: QKeyEvent
-        """
         if event.key() == Qt.Key_Escape:
             # Cancel drawing
             self.is_drawing = False
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def deactivate(self):
-        """Deactivate the tool."""
         if self.rubber_band:
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
             self.rubber_band.hide()
@@ -136,14 +109,12 @@ class BBoxMapTool(QgsMapTool):
         super().deactivate()
 
     def cleanup(self):
-        """Remove rubber band from canvas and release it."""
         if self.rubber_band:
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
             self.canvas.scene().removeItem(self.rubber_band)
             self.rubber_band = None
 
     def activate(self):
-        """Activate the tool."""
         super().activate()
         if not self.rubber_band:
             self._create_rubber_band()

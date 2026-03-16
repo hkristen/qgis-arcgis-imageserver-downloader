@@ -57,11 +57,6 @@ class TileDownloadTask(QgsTask):
         self.tile_ids = []
 
     def run(self):
-        """Execute the download task.
-
-        Returns:
-            True if successful, False otherwise
-        """
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -162,11 +157,6 @@ class TileDownloadTask(QgsTask):
             return False
 
     def finished(self, result: bool):
-        """Called when task finishes.
-
-        Args:
-            result: True if task completed successfully
-        """
         if result:
             log(f'Download complete: {len(self.downloaded_files)} files')
             self.downloadComplete.emit(self.downloaded_files)
@@ -176,6 +166,5 @@ class TileDownloadTask(QgsTask):
             self.downloadFailed.emit(error)
 
     def cancel(self):
-        """Cancel the task."""
         log('Cancelling download task...', Qgis.Warning)
         super().cancel()
