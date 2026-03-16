@@ -508,6 +508,9 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         """Deactivate bbox drawing tool."""
         if self.bbox_tool and self.canvas.mapTool() == self.bbox_tool:
             self.canvas.unsetMapTool(self.bbox_tool)
+        if self.bbox_tool:
+            self.bbox_tool.cleanup()
+            self.bbox_tool = None
 
     def _on_bbox_drawn(self, rect: QgsRectangle):
         """Handle bbox drawn on canvas.
@@ -1028,7 +1031,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         Args:
             event: Close event
         """
-        # Deactivate bbox tool
+        # Deactivate and clean up bbox tool
+        if self.bbox_tool:
+            self.bbox_tool.cleanup()
+            self.bbox_tool = None
         self._deactivate_bbox_tool()
 
         # Cancel any running tasks

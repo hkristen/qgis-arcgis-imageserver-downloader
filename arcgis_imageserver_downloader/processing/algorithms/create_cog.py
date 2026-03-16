@@ -195,15 +195,14 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             multi_feedback.setCurrentStep(2)
             feedback.pushInfo('Creating compressed GeoTIFF...')
 
-            translate_options = '-co COMPRESS=LZW -co TILED=YES'
-            if nodata is not None:
-                translate_options += f' -a_nodata {nodata}'
+            extra_args = f'-a_nodata {nodata}' if nodata is not None else ''
 
             translate_result = processing.run(
                 'gdal:translate',
                 {
                     'INPUT': temp_warped_vrt,
-                    'OPTIONS': translate_options,
+                    'OPTIONS': 'COMPRESS=LZW|TILED=YES',
+                    'EXTRA': extra_args,
                     'DATA_TYPE': 0,  # Use input layer data type
                     'OUTPUT': temp_tif
                 },
@@ -236,7 +235,8 @@ The output is a single, optimized raster file suitable for cloud storage and eff
                 'gdal:translate',
                 {
                     'INPUT': temp_tif,
-                    'OPTIONS': '-of COG -co COMPRESS=LZW -co OVERVIEWS=IGNORE_EXISTING',
+                    'OPTIONS': 'COMPRESS=LZW|OVERVIEWS=IGNORE_EXISTING',
+                    'EXTRA': '-of COG',
                     'DATA_TYPE': 0,  # Use input layer data type
                     'OUTPUT': output_cog
                 },

@@ -4,8 +4,8 @@ Map tool for drawing bounding box on canvas
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
+    Qgis,
     QgsRectangle,
-    QgsWkbTypes,
     QgsGeometry,
     QgsPointXY
 )
@@ -39,7 +39,7 @@ class BBoxMapTool(QgsMapTool):
 
     def _create_rubber_band(self):
         """Create rubber band for drawing bbox."""
-        self.rubber_band = QgsRubberBand(self.canvas, QgsWkbTypes.PolygonGeometry)
+        self.rubber_band = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
         self.rubber_band.setColor(QColor(255, 0, 0, 50))
         self.rubber_band.setFillColor(QColor(255, 0, 0, 30))
         self.rubber_band.setWidth(2)
@@ -55,7 +55,7 @@ class BBoxMapTool(QgsMapTool):
             self.start_point = self.toMapCoordinates(event.pos())
             self.end_point = self.start_point
             self.is_drawing = True
-            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+            self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def canvasMoveEvent(self, event):
         """Handle mouse move event.
@@ -92,7 +92,7 @@ class BBoxMapTool(QgsMapTool):
                 self.bboxDrawn.emit(rect)
 
             # Clear rubber band
-            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+            self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def _update_rubber_band(self, rect):
         """Update rubber band geometry.
@@ -103,7 +103,7 @@ class BBoxMapTool(QgsMapTool):
         if rect.isEmpty():
             return
 
-        self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+        self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
         # Create rectangle geometry
         points = [
@@ -125,14 +125,22 @@ class BBoxMapTool(QgsMapTool):
         if event.key() == Qt.Key_Escape:
             # Cancel drawing
             self.is_drawing = False
-            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+            self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def deactivate(self):
         """Deactivate the tool."""
         if self.rubber_band:
-            self.rubber_band.reset(QgsWkbTypes.PolygonGeometry)
+            self.rubber_band.reset(Qgis.GeometryType.Polygon)
+            self.rubber_band.hide()
         self.is_drawing = False
         super().deactivate()
+
+    def cleanup(self):
+        """Remove rubber band from canvas and release it."""
+        if self.rubber_band:
+            self.rubber_band.reset(Qgis.GeometryType.Polygon)
+            self.canvas.scene().removeItem(self.rubber_band)
+            self.rubber_band = None
 
     def activate(self):
         """Activate the tool."""
