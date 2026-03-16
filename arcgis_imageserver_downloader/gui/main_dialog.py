@@ -793,6 +793,8 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.download_task.progressChanged.connect(self._on_download_progress)
         self.download_task.downloadComplete.connect(self._on_download_complete)
         self.download_task.downloadFailed.connect(self._on_download_failed)
+        self.download_task.taskCompleted.connect(lambda: setattr(self, 'download_task', None))
+        self.download_task.taskTerminated.connect(lambda: setattr(self, 'download_task', None))
 
         # Add to task manager
         QgsApplication.taskManager().addTask(self.download_task)
@@ -802,10 +804,16 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
     def _cancel_download(self):
         """Cancel the current download."""
         if self.download_task:
-            self.download_task.cancel()
+            try:
+                self.download_task.cancel()
+            except RuntimeError:
+                pass
 
         if self.processing_task:
-            self.processing_task.cancel()
+            try:
+                self.processing_task.cancel()
+            except RuntimeError:
+                pass
 
     def _on_download_progress(self, progress: float):
         """Handle download progress update.
@@ -822,6 +830,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         Args:
             tile_files: List of downloaded tile file paths
         """
+        self.download_task = None
         self._log(f'Download complete: {len(tile_files)} tiles downloaded')
         self.status_label.setText(self.tr('Download complete: {count} tiles').format(count=len(tile_files)))
 
@@ -845,6 +854,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         Args:
             error: Error message
         """
+        self.download_task = None
         self._log(f'Download failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Download failed: {error}').format(error=error))
         self.progress_bar.setValue(0)
@@ -898,6 +908,8 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.processing_task.progressChanged.connect(self._on_processing_progress)
         self.processing_task.processingComplete.connect(self._on_processing_complete)
         self.processing_task.processingFailed.connect(self._on_processing_failed)
+        self.processing_task.taskCompleted.connect(lambda: setattr(self, 'processing_task', None))
+        self.processing_task.taskTerminated.connect(lambda: setattr(self, 'processing_task', None))
 
         # Add to task manager
         QgsApplication.taskManager().addTask(self.processing_task)
@@ -919,6 +931,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         Args:
             output_file: Path to output COG file
         """
+        self.processing_task = None
         self._log(f'COG creation complete: {output_file}')
         self.status_label.setText(self.tr('Processing complete'))
         self.progress_bar.setValue(100)
@@ -931,6 +944,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         Args:
             error: Error message
         """
+        self.processing_task = None
         self._log(f'COG processing failed: {error}', Qgis.Critical)
         self.status_label.setText(self.tr('Processing failed: {error}').format(error=error))
         self.progress_bar.setValue(0)
