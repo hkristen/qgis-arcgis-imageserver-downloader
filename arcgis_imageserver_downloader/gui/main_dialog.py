@@ -217,20 +217,22 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.bbox_button_group = QButtonGroup()
 
         self.bbox_draw_radio = QRadioButton(self.tr('Draw on canvas'))
-        self.bbox_draw_radio.setChecked(True)
-        self.bbox_draw_radio.toggled.connect(self._on_bbox_method_changed)
         self.bbox_button_group.addButton(self.bbox_draw_radio)
         bbox_layout.addWidget(self.bbox_draw_radio)
 
         self.bbox_layer_radio = QRadioButton(self.tr('From active layer extent'))
-        self.bbox_layer_radio.toggled.connect(self._on_bbox_method_changed)
         self.bbox_button_group.addButton(self.bbox_layer_radio)
         bbox_layout.addWidget(self.bbox_layer_radio)
 
         self.bbox_manual_radio = QRadioButton(self.tr('Manual coordinates'))
-        self.bbox_manual_radio.toggled.connect(self._on_bbox_method_changed)
         self.bbox_button_group.addButton(self.bbox_manual_radio)
         bbox_layout.addWidget(self.bbox_manual_radio)
+
+        # Connect toggled signals after setChecked to avoid stealing map tool on init
+        self.bbox_draw_radio.setChecked(True)
+        self.bbox_draw_radio.toggled.connect(self._on_bbox_method_changed)
+        self.bbox_layer_radio.toggled.connect(self._on_bbox_method_changed)
+        self.bbox_manual_radio.toggled.connect(self._on_bbox_method_changed)
 
         # Manual bbox input (initially hidden)
         self.bbox_manual_widget = QWidget()

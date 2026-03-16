@@ -86,7 +86,7 @@ class PluginSettings:
 
     def get_default_epsg(self) -> int:
         """Get default EPSG code."""
-        return int(self.get('default_epsg', 32633))
+        return self.settings.value(self._key('default_epsg'), 32633, type=int)
 
     def set_default_epsg(self, epsg: int):
         """Set default EPSG code."""
@@ -98,7 +98,7 @@ class PluginSettings:
         Returns:
             0 = tiles only, 1 = uncompressed merge, 2 = compressed merge
         """
-        return int(self.get('output_format', 2))
+        return self.settings.value(self._key('output_format'), 2, type=int)
 
     def set_output_format(self, value: int):
         """Set output format preference."""
@@ -106,7 +106,7 @@ class PluginSettings:
 
     def get_add_to_canvas(self) -> bool:
         """Get whether to add result to canvas by default."""
-        return bool(self.get('add_to_canvas', True))
+        return self.settings.value(self._key('add_to_canvas'), True, type=bool)
 
     def set_add_to_canvas(self, value: bool):
         """Set whether to add result to canvas by default."""
@@ -114,7 +114,7 @@ class PluginSettings:
 
     def get_max_retry(self) -> int:
         """Get maximum retry attempts."""
-        return int(self.get('max_retry', 5))
+        return self.settings.value(self._key('max_retry'), 5, type=int)
 
     def set_max_retry(self, value: int):
         """Set maximum retry attempts."""

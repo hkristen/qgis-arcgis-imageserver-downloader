@@ -266,7 +266,8 @@ class ServiceBrowserWidget(QWidget):
         if name_item:
             service = name_item.data(Qt.UserRole)
             if service:
-                # Add base_url to service info
+                # Add base_url to service info (shallow copy to avoid mutating stored data)
+                service = dict(service)
                 service['base_url'] = self.current_base_url
                 self.serviceSelected.emit(service)
 
@@ -301,6 +302,7 @@ class ServiceBrowserWidget(QWidget):
         if name_item:
             service = name_item.data(Qt.UserRole)
             if service:
+                service = dict(service)
                 service['base_url'] = self.current_base_url
                 return service
 
