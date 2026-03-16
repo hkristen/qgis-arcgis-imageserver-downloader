@@ -103,7 +103,7 @@ class TileDownloadTask(QgsTask):
                         log(f'No rasterFiles for tile {tile_id}, skipping', Qgis.Warning)
                         continue
                     tile_filepath = raster_files[0]['id']
-                    filename = tile_filepath.split("\\")[-1]
+                    filename = tile_filepath.replace('\\', '/').rsplit('/', 1)[-1]
 
                     # Download tile (download_tile raises ValueError for overview tiles)
                     output_path = self.client.download_tile(
@@ -150,7 +150,7 @@ class TileDownloadTask(QgsTask):
         if result:
             log(f'Download complete: {len(self.downloaded_files)} files')
             self.downloadComplete.emit(self.downloaded_files)
-        else:
+        elif not self.isCanceled():
             error = self.error_message or 'Unknown error'
             log(f'Download failed: {error}', Qgis.Critical)
             self.downloadFailed.emit(error)

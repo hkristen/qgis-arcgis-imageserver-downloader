@@ -231,7 +231,7 @@ class ArcGISClient:
     ) -> Path:
         """Download a single raster tile."""
         file_endpoint_url = f"{service_url}/{service_name}/ImageServer/file"
-        filename = tile_filepath.split("\\")[-1]
+        filename = tile_filepath.replace('\\', '/').rsplit('/', 1)[-1]
 
         # Skip overview tiles
         if filename.startswith("Ov_"):

@@ -17,7 +17,6 @@ class COGProcessingTask(QgsTask):
     """Background task for creating compressed, tiled GeoTIFF with overviews from tiles."""
 
     # Signals
-    processingProgress = pyqtSignal(int, str)  # progress, message
     processingComplete = pyqtSignal(str)  # output file path
     processingFailed = pyqtSignal(str)  # error message
 

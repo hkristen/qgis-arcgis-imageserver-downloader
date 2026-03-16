@@ -132,15 +132,15 @@ class ServiceBrowserWidget(QWidget):
         self.fetch_task = ServiceFetchTask(base_url)
         self.fetch_task.taskCompleted.connect(self._on_fetch_complete)
         self.fetch_task.taskTerminated.connect(self._on_fetch_failed)
-        self.fetch_task.taskCompleted.connect(lambda: setattr(self, 'fetch_task', None))
-        self.fetch_task.taskTerminated.connect(lambda: setattr(self, 'fetch_task', None))
 
         QgsApplication.taskManager().addTask(self.fetch_task)
 
     def _on_fetch_complete(self):
-        if self.fetch_task:
+        task = self.fetch_task
+        self.fetch_task = None
+        if task:
             try:
-                self.services = self.fetch_task.services
+                self.services = task.services
                 self.filtered_services = self.services.copy()
                 self._populate_table()
                 self.status_label.setText(self.tr('Found {0} services').format(len(self.services)))
@@ -150,19 +150,20 @@ class ServiceBrowserWidget(QWidget):
                 log('Task object was deleted before completion handler', Qgis.Warning)
 
     def _on_fetch_failed(self):
-        if self.fetch_task:
+        task = self.fetch_task
+        self.fetch_task = None
+        if task:
             try:
-                if self.fetch_task.error_message:
+                if task.error_message:
                     self.status_label.setText(self.tr('Failed to load services'))
                     QMessageBox.warning(
                         self,
                         self.tr('Error'),
-                        self.tr('Failed to fetch services:\n\n{0}').format(self.fetch_task.error_message)
+                        self.tr('Failed to fetch services:\n\n{0}').format(task.error_message)
                     )
                 else:
                     self.status_label.setText(self.tr('Service fetch cancelled'))
             except RuntimeError:
-                # Task object has been deleted by Qt
                 self.status_label.setText(self.tr('Service fetch cancelled'))
         else:
             self.status_label.setText(self.tr('Service fetch cancelled'))

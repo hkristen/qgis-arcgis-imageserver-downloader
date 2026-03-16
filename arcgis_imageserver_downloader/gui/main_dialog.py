@@ -459,7 +459,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
             self.output_path_edit.setText(output_dir)
 
     def closeEvent(self, event):
-        # Deactivate and clean up bbox tool
+        self._save_settings()
         self._deactivate_bbox_tool()
 
         # Cancel any running tasks

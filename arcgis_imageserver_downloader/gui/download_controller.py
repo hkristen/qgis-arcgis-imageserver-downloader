@@ -16,7 +16,7 @@ class DownloadControllerMixin:
         checks = [
             (not self.current_preset, 'Please select a server.'),
             (not selected_service, 'Please select a service.'),
-            (selected_service and not selected_service.get('base_url'), 'Selected service has no server URL. Please re-select a server.'),
+            (selected_service is not None and not selected_service.get('base_url'), 'Selected service has no server URL. Please re-select a server.'),
             (not self._get_bbox(), 'Please select a bounding box.'),
             (not self.output_path_edit.text(), 'Please select an output directory.'),
         ]
