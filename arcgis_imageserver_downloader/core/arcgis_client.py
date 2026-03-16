@@ -1,27 +1,26 @@
 """
-ArcGIS REST API client using Qt networking
+ArcGIS REST API client using urllib
 """
 import json
 import re
+import urllib.request
+import urllib.parse
+import urllib.error
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
-from qgis.PyQt.QtCore import QUrl, QUrlQuery
 from qgis.core import (
-    QgsBlockingNetworkRequest,
-    QgsNetworkAccessManager,
     QgsMessageLog,
     Qgis
 )
-from qgis.PyQt.QtNetwork import QNetworkRequest
 
 
 class ArcGISClient:
-    """Client for ArcGIS REST API using Qt networking."""
+    """Client for ArcGIS REST API using urllib."""
 
     def __init__(self):
         """Initialize the ArcGIS client."""
-        self.network_manager = QgsNetworkAccessManager.instance()
+        pass
 
     def _log(self, message: str, level: Qgis.MessageLevel = Qgis.Info):
         """Log message to QGIS message log."""
@@ -33,7 +32,7 @@ class ArcGISClient:
         params: Optional[Dict] = None,
         max_retry: int = 3
     ) -> Dict:
-        """Make a blocking network request and return JSON response.
+        """Make a network request and return JSON response.
 
         Args:
             url: URL to request
@@ -46,37 +45,31 @@ class ArcGISClient:
         Raises:
             RuntimeError: If request fails after retries
         """
-        # Build URL with query parameters
-        qurl = QUrl(url)
         if params:
-            query = QUrlQuery()
-            for key, value in params.items():
-                query.addQueryItem(key, str(value))
-            qurl.setQuery(query)
+            full_url = url + '?' + urllib.parse.urlencode(params)
+        else:
+            full_url = url
 
-        request = QNetworkRequest(qurl)
-        request.setHeader(QNetworkRequest.UserAgentHeader, 'QGIS ArcGIS ImageServer Downloader')
+        req = urllib.request.Request(
+            full_url,
+            headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
+        )
 
-        # Make blocking request with retries
+        last_error = None
         for attempt in range(max_retry):
-            blocking_request = QgsBlockingNetworkRequest()
-            error_code = blocking_request.get(request)
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    content = response.read()
+                    try:
+                        return json.loads(content.decode('utf-8'))
+                    except json.JSONDecodeError as e:
+                        raise RuntimeError(f"Failed to parse JSON response: {e}")
+            except urllib.error.URLError as e:
+                last_error = e
+                if attempt < max_retry - 1:
+                    self._log(f"Request failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
 
-            if error_code == QgsBlockingNetworkRequest.NoError:
-                reply = blocking_request.reply()
-                content = reply.content()
-                try:
-                    return json.loads(content.data().decode('utf-8'))
-                except json.JSONDecodeError as e:
-                    raise RuntimeError(f"Failed to parse JSON response: {e}")
-
-            # Log retry attempt
-            if attempt < max_retry - 1:
-                self._log(f"Request failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
-
-        # All retries failed
-        error_msg = blocking_request.reply().errorString() if blocking_request.reply() else "Unknown error"
-        raise RuntimeError(f"Network request failed after {max_retry} attempts: {error_msg}")
+        raise RuntimeError(f"Network request failed after {max_retry} attempts: {last_error}")
 
     def _download_file(
         self,
@@ -99,39 +92,31 @@ class ArcGISClient:
         Raises:
             RuntimeError: If download fails
         """
-        # Build URL with query parameters
-        qurl = QUrl(url)
         if params:
-            query = QUrlQuery()
-            for key, value in params.items():
-                query.addQueryItem(key, str(value))
-            qurl.setQuery(query)
+            full_url = url + '?' + urllib.parse.urlencode(params)
+        else:
+            full_url = url
 
-        request = QNetworkRequest(qurl)
-        request.setHeader(QNetworkRequest.UserAgentHeader, 'QGIS ArcGIS ImageServer Downloader')
+        req = urllib.request.Request(
+            full_url,
+            headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
+        )
 
-        # Make blocking request with retries
+        last_error = None
         for attempt in range(max_retry):
-            blocking_request = QgsBlockingNetworkRequest()
-            error_code = blocking_request.get(request)
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    data = response.read()
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(output_path, 'wb') as f:
+                        f.write(data)
+                    return True
+            except urllib.error.URLError as e:
+                last_error = e
+                if attempt < max_retry - 1:
+                    self._log(f"Download failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
 
-            if error_code == QgsBlockingNetworkRequest.NoError:
-                reply = blocking_request.reply()
-                content = reply.content()
-
-                # Write to file
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(output_path, 'wb') as f:
-                    f.write(content.data())
-                return True
-
-            # Log retry attempt
-            if attempt < max_retry - 1:
-                self._log(f"Download failed (attempt {attempt + 1}/{max_retry}), retrying...", Qgis.Warning)
-
-        # All retries failed
-        error_msg = blocking_request.reply().errorString() if blocking_request.reply() else "Unknown error"
-        raise RuntimeError(f"File download failed after {max_retry} attempts: {error_msg}")
+        raise RuntimeError(f"File download failed after {max_retry} attempts: {last_error}")
 
     def get_services(self, base_url: str) -> List[Dict]:
         """Fetch services from ArcGIS REST endpoint.
