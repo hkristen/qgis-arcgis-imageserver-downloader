@@ -1,6 +1,7 @@
 """
 QgsTask for creating COG from tiles in background
 """
+import subprocess
 import tempfile
 import shutil
 from pathlib import Path
@@ -9,56 +10,9 @@ from typing import List, Optional
 from qgis.core import (
     QgsTask,
     QgsMessageLog,
-    Qgis,
-    QgsProcessingContext,
-    QgsProcessingFeedback
+    Qgis
 )
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis import processing
-
-
-class COGProcessingFeedback(QgsProcessingFeedback):
-    """Custom feedback for processing that updates task progress."""
-
-    def __init__(self, task):
-        """Initialize feedback.
-
-        Args:
-            task: Parent QgsTask
-        """
-        super().__init__()
-        self.task = task
-        self.error_messages = []
-
-    def reportError(self, error, fatalError=False):
-        """Capture error messages.
-
-        Args:
-            error: Error message
-            fatalError: Whether it's a fatal error
-        """
-        super().reportError(error, fatalError)
-        self.error_messages.append(error)
-        if self.task:
-            self.task._log(f'GDAL Error: {error}', Qgis.Critical if fatalError else Qgis.Warning)
-
-    def setProgress(self, progress):
-        """Update progress.
-
-        Args:
-            progress: Progress percentage (0-100)
-        """
-        super().setProgress(progress)
-        if self.task:
-            self.task.setProgress(int(progress))
-
-    def isCanceled(self):
-        """Check if task is canceled.
-
-        Returns:
-            True if canceled
-        """
-        return self.task and self.task.isCanceled()
 
 
 class COGProcessingTask(QgsTask):
@@ -124,49 +78,32 @@ class COGProcessingTask(QgsTask):
 
             # Create temporary directory
             self.temp_dir = tempfile.mkdtemp()
-            temp_vrt = Path(self.temp_dir) / 'temp.vrt'
-            temp_warped_vrt = Path(self.temp_dir) / 'temp_warped.vrt'
+            temp_vrt = str(Path(self.temp_dir) / 'temp.vrt')
+            temp_warped_vrt = str(Path(self.temp_dir) / 'temp_warped.vrt')
 
-            # Create processing context and feedback
-            context = QgsProcessingContext()
-            feedback = COGProcessingFeedback(self)
-
-            # Step 1: Build VRT (33% of progress)
+            # Step 1: Build VRT
             self._log('Building virtual raster...')
             self.setProgress(0)
 
-            vrt_result = processing.run(
-                'gdal:buildvirtualraster',
-                {
-                    'INPUT': [str(f) for f in self.tile_files],
-                    'RESOLUTION': 0,
-                    'SEPARATE': False,
-                    'OUTPUT': str(temp_vrt)
-                },
-                context=context,
-                feedback=feedback
+            subprocess.run(
+                ['gdalbuildvrt', temp_vrt] + [str(f) for f in self.tile_files],
+                check=True,
+                capture_output=True,
+                text=True
             )
 
             if self.isCanceled():
                 return False
 
-            # Step 2: Warp to target EPSG (66% of progress)
+            # Step 2: Warp to target EPSG
             self._log(f'Warping to EPSG:{self.epsg}...')
             self.setProgress(33)
 
-            warp_result = processing.run(
-                'gdal:warpreproject',
-                {
-                    'INPUT': str(temp_vrt),
-                    'SOURCE_CRS': None,
-                    'TARGET_CRS': f'EPSG:{self.epsg}',
-                    'RESAMPLING': 0,
-                    'DATA_TYPE': 0,
-                    'MULTITHREADING': True,
-                    'OUTPUT': str(temp_warped_vrt)
-                },
-                context=context,
-                feedback=feedback
+            subprocess.run(
+                ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}', '-multi', temp_vrt, temp_warped_vrt],
+                check=True,
+                capture_output=True,
+                text=True
             )
 
             if self.isCanceled():
@@ -181,55 +118,39 @@ class COGProcessingTask(QgsTask):
             # Ensure output directory exists
             self.output_cog.parent.mkdir(parents=True, exist_ok=True)
 
-            # Check if input VRT exists
-            if not temp_warped_vrt.exists():
+            if not Path(temp_warped_vrt).exists():
                 self.error_message = f'Input VRT not found: {temp_warped_vrt}'
                 self._log(self.error_message, Qgis.Critical)
                 return False
 
-            self._log(f'Input VRT: {temp_warped_vrt}')
-            self._log(f'Output file: {self.output_cog}')
-            self._log(f'Output format: {self.output_format} ({format_name})')
-
-            # Build creation options based on output format
             if self.output_format == 1:
-                # Uncompressed - no compression, no tiling
-                extra_options = '-co BIGTIFF=YES'
+                translate_cmd = [
+                    'gdal_translate',
+                    '-co', 'BIGTIFF=YES',
+                ]
             else:
-                # Compressed (format 2 or default) - LZW compression with tiling
-                extra_options = '-co COMPRESS=LZW -co TILED=YES -co BIGTIFF=YES'
+                translate_cmd = [
+                    'gdal_translate',
+                    '-co', 'COMPRESS=LZW',
+                    '-co', 'TILED=YES',
+                    '-co', 'BIGTIFF=YES',
+                ]
 
-            # Add nodata if specified
-            translate_options = ''
             if self.nodata is not None:
-                translate_options = f'-a_nodata {self.nodata}'
+                translate_cmd += ['-a_nodata', str(self.nodata)]
 
-            self._log(f'Creation options: {extra_options}')
-            if translate_options:
-                self._log(f'Translate options: {translate_options}')
+            translate_cmd += [temp_warped_vrt, str(self.output_cog)]
 
             try:
-                translate_result = processing.run(
-                    'gdal:translate',
-                    {
-                        'INPUT': str(temp_warped_vrt),
-                        'TARGET_CRS': None,
-                        'NODATA': None,
-                        'COPY_SUBDATASETS': False,
-                        'OPTIONS': translate_options if translate_options else '',
-                        'EXTRA': extra_options,
-                        'DATA_TYPE': 0,
-                        'OUTPUT': str(self.output_cog)
-                    },
-                    context=context,
-                    feedback=feedback
+                subprocess.run(
+                    translate_cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True
                 )
-                self._log(f'GDAL translate result: {translate_result}')
-            except Exception as e:
-                self.error_message = f'GDAL translate failed: {str(e)}'
+            except subprocess.CalledProcessError as e:
+                self.error_message = f'gdal_translate failed: {e.stderr}'
                 self._log(self.error_message, Qgis.Critical)
-                if hasattr(feedback, 'error_messages') and feedback.error_messages:
-                    self._log(f'GDAL errors: {feedback.error_messages}', Qgis.Critical)
                 return False
 
             if self.isCanceled():
@@ -241,21 +162,16 @@ class COGProcessingTask(QgsTask):
                 self.setProgress(85)
 
                 try:
-                    processing.run(
-                        'gdal:overviews',
-                        {
-                            'INPUT': str(self.output_cog),
-                            'LEVELS': '2 4 8 16',
-                            'RESAMPLING': 0,  # Nearest neighbor
-                            'FORMAT': 0  # Internal (GTiff)
-                        },
-                        context=context,
-                        feedback=feedback
+                    subprocess.run(
+                        ['gdaladdo', '-r', 'nearest', str(self.output_cog), '2', '4', '8', '16'],
+                        check=True,
+                        capture_output=True,
+                        text=True
                     )
                     self._log('Overviews added successfully')
-                except Exception as e:
+                except subprocess.CalledProcessError as e:
                     # Overviews are nice to have but not critical
-                    self._log(f'Failed to add overviews (non-critical): {str(e)}', Qgis.Warning)
+                    self._log(f'Failed to add overviews (non-critical): {e.stderr}', Qgis.Warning)
             else:
                 # Skip overviews for uncompressed format
                 self._log('Skipping overviews (uncompressed format)')
