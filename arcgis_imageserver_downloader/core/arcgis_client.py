@@ -27,19 +27,7 @@ class ArcGISClient:
         params: Optional[Dict] = None,
         max_retry: int = 3
     ) -> Dict:
-        """Make a network request and return JSON response.
-
-        Args:
-            url: URL to request
-            params: Query parameters
-            max_retry: Maximum number of retry attempts
-
-        Returns:
-            JSON response as dictionary
-
-        Raises:
-            RuntimeError: If request fails after retries
-        """
+        """Make a network request and return JSON response."""
         if params:
             full_url = url + '?' + urllib.parse.urlencode(params)
         else:
@@ -72,20 +60,7 @@ class ArcGISClient:
         output_path: Path,
         max_retry: int = 3
     ) -> bool:
-        """Download a file from URL to output path.
-
-        Args:
-            url: URL to download from
-            params: Query parameters
-            output_path: Path to save file
-            max_retry: Maximum retry attempts
-
-        Returns:
-            True if successful
-
-        Raises:
-            RuntimeError: If download fails
-        """
+        """Download a file from URL to output path."""
         if params:
             full_url = url + '?' + urllib.parse.urlencode(params)
         else:
@@ -121,14 +96,7 @@ class ArcGISClient:
         raise RuntimeError(f"File download failed after {max_retry} attempts: {last_error}")
 
     def get_services(self, base_url: str) -> List[Dict]:
-        """Fetch services from ArcGIS REST endpoint.
-
-        Args:
-            base_url: Base URL of the ArcGIS REST endpoint
-
-        Returns:
-            List of service dictionaries with parsed metadata
-        """
+        """Fetch services from ArcGIS REST endpoint."""
         params = {'f': 'json'}
         data = self._make_request(base_url, params)
 
@@ -201,21 +169,7 @@ class ArcGISClient:
         in_sr: int = 32633,
         out_sr: int = 32633
     ) -> List[int]:
-        """Query tile IDs from ImageServer that intersect bounding box.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            bbox: Bounding box as (minx, miny, maxx, maxy), None for all tiles
-            in_sr: Input spatial reference system EPSG code
-            out_sr: Output spatial reference system EPSG code
-
-        Returns:
-            List of tile object IDs
-
-        Raises:
-            RuntimeError: If no tiles found or error occurs
-        """
+        """Query tile IDs from ImageServer that intersect bounding box."""
         query_url = f"{service_url}/{service_name}/ImageServer/query"
 
         params = {
@@ -250,19 +204,7 @@ class ArcGISClient:
         service_name: str,
         tile_id: int
     ) -> Dict:
-        """Get information about a specific tile.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            tile_id: Tile object ID
-
-        Returns:
-            Dictionary with tile information including file path
-
-        Raises:
-            RuntimeError: If error occurs
-        """
+        """Get information about a specific tile."""
         download_url = f"{service_url}/{service_name}/ImageServer/download"
         params = {
             'rasterIds': str(tile_id),
@@ -287,22 +229,7 @@ class ArcGISClient:
         output_dir: Path,
         max_retry: int = 5
     ) -> Path:
-        """Download a single raster tile.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            tile_id: Tile object ID
-            tile_filepath: Remote file path from tile info
-            output_dir: Directory to save tile
-            max_retry: Maximum retry attempts
-
-        Returns:
-            Path to downloaded tile file
-
-        Raises:
-            RuntimeError: If download fails
-        """
+        """Download a single raster tile."""
         file_endpoint_url = f"{service_url}/{service_name}/ImageServer/file"
         filename = tile_filepath.split("\\")[-1]
 
@@ -330,16 +257,7 @@ class ArcGISClient:
         service_name: str,
         output_path: Optional[Path] = None
     ) -> Dict:
-        """Get service metadata from ImageServer.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            output_path: Optional path to save metadata JSON
-
-        Returns:
-            Service metadata dictionary
-        """
+        """Get service metadata from ImageServer."""
         image_server_url = f"{service_url}/{service_name}/ImageServer"
         params = {'f': 'pjson'}
 
@@ -359,17 +277,7 @@ class ArcGISClient:
         tile_id: int,
         output_path: Optional[Path] = None
     ) -> Dict:
-        """Get metadata for a specific tile.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            tile_id: Tile object ID
-            output_path: Optional path to save metadata JSON
-
-        Returns:
-            Tile metadata dictionary
-        """
+        """Get metadata for a specific tile."""
         metadata_url = f"{service_url}/{service_name}/ImageServer/{tile_id}"
         params = {'f': 'pjson'}
 

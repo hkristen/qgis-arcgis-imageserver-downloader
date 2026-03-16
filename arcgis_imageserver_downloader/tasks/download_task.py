@@ -29,17 +29,7 @@ class TileDownloadTask(QgsTask):
         max_retry: int = 5,
         description: str = 'Downloading tiles'
     ):
-        """Initialize download task.
-
-        Args:
-            service_url: Base URL of the service
-            service_name: Name of the service
-            output_dir: Directory to save tiles
-            bbox: Optional bounding box (minx, miny, maxx, maxy)
-            epsg: EPSG code for output
-            max_retry: Maximum retry attempts
-            description: Task description
-        """
+        """Initialize download task."""
         super().__init__(description, QgsTask.CanCancel)
 
         # Store parameters (make copies of mutable objects)

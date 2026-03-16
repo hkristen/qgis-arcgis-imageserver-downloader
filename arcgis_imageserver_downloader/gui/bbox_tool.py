@@ -19,11 +19,7 @@ class BBoxMapTool(QgsMapTool):
     bboxDrawn = pyqtSignal(QgsRectangle)
 
     def __init__(self, canvas):
-        """Initialize the bbox map tool.
-
-        Args:
-            canvas: QgsMapCanvas instance
-        """
+        """Initialize the bbox map tool."""
         super().__init__(canvas)
         self.canvas = canvas
         self.start_point = None

@@ -30,16 +30,7 @@ class COGProcessingTask(QgsTask):
         output_format: int = 2,
         description: str = 'Creating GeoTIFF'
     ):
-        """Initialize merge processing task.
-
-        Args:
-            tile_files: List of tile file paths
-            output_cog: Output file path
-            epsg: EPSG code for output
-            nodata: Optional nodata value
-            output_format: 1=uncompressed, 2=compressed
-            description: Task description
-        """
+        """Initialize merge processing task."""
         super().__init__(description, QgsTask.CanCancel)
 
         # Store parameters (make copies)

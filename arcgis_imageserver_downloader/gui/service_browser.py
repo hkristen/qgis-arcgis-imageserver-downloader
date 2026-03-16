@@ -50,11 +50,7 @@ class ServiceBrowserWidget(QWidget):
     serviceSelected = pyqtSignal(dict)  # service info dictionary
 
     def __init__(self, parent=None):
-        """Initialize the service browser widget.
-
-        Args:
-            parent: Parent widget
-        """
+        """Initialize the service browser widget."""
         super().__init__(parent)
 
         self.services = []
@@ -116,11 +112,7 @@ class ServiceBrowserWidget(QWidget):
         self.setLayout(layout)
 
     def load_services(self, base_url: str):
-        """Load services from ArcGIS REST endpoint.
-
-        Args:
-            base_url: Base URL of the ArcGIS REST endpoint
-        """
+        """Load services from ArcGIS REST endpoint."""
         self.current_base_url = base_url
         self.services = []
         self.filtered_services = []
@@ -250,11 +242,7 @@ class ServiceBrowserWidget(QWidget):
         QDesktopServices.openUrl(QUrl(metadata_url))
 
     def get_selected_service(self) -> Optional[Dict]:
-        """Get currently selected service.
-
-        Returns:
-            Service dictionary or None
-        """
+        """Get currently selected service."""
         selected_items = self.service_table.selectedItems()
         if not selected_items:
             return None

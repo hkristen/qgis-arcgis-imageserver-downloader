@@ -20,14 +20,7 @@ class ServicePreset:
         default_epsg: int = 32633,
         description: str = ""
     ):
-        """Initialize service preset.
-
-        Args:
-            name: Display name for the preset
-            url: Base URL of the ArcGIS REST endpoint
-            default_epsg: Default EPSG code for output
-            description: Optional description
-        """
+        """Initialize service preset."""
         self.name = name
         self.url = url
         self.default_epsg = default_epsg
@@ -57,11 +50,7 @@ class ServiceManager:
     """Manages service presets and custom servers."""
 
     def __init__(self, plugin_dir: Optional[Path] = None):
-        """Initialize service manager.
-
-        Args:
-            plugin_dir: Path to plugin directory (for loading built-in presets)
-        """
+        """Initialize service manager."""
         self.plugin_dir = plugin_dir
         self._presets: Dict[str, ServicePreset] = {}
         self._custom_servers: List[ServicePreset] = []
@@ -98,30 +87,15 @@ class ServiceManager:
                 log(f"Failed to load preset from {preset_file}: {e}", Qgis.Warning)
 
     def get_preset(self, name: str) -> Optional[ServicePreset]:
-        """Get preset by name.
-
-        Args:
-            name: Preset name
-
-        Returns:
-            ServicePreset or None if not found
-        """
+        """Get preset by name."""
         return self._presets.get(name)
 
     def get_all_presets(self) -> List[ServicePreset]:
-        """Get all available presets.
-
-        Returns:
-            List of ServicePreset objects
-        """
+        """Get all available presets."""
         return list(self._presets.values())
 
     def add_custom_server(self, preset: ServicePreset):
-        """Add a custom server configuration.
-
-        Args:
-            preset: ServicePreset to add
-        """
+        """Add a custom server configuration."""
         # Check if already exists
         for existing in self._custom_servers:
             if existing.url == preset.url:
@@ -134,14 +108,7 @@ class ServiceManager:
         self._custom_servers.append(preset)
 
     def remove_custom_server(self, url: str) -> bool:
-        """Remove a custom server by URL.
-
-        Args:
-            url: Server URL to remove
-
-        Returns:
-            True if removed, False if not found
-        """
+        """Remove a custom server by URL."""
         for i, preset in enumerate(self._custom_servers):
             if preset.url == url:
                 self._custom_servers.pop(i)
@@ -149,37 +116,21 @@ class ServiceManager:
         return False
 
     def get_custom_servers(self) -> List[ServicePreset]:
-        """Get all custom servers.
-
-        Returns:
-            List of custom ServicePreset objects
-        """
+        """Get all custom servers."""
         return self._custom_servers
 
     def get_all_servers(self) -> List[ServicePreset]:
-        """Get all servers (presets + custom).
-
-        Returns:
-            List of all ServicePreset objects
-        """
+        """Get all servers (presets + custom)."""
         return self.get_all_presets() + self.get_custom_servers()
 
     def save_custom_servers(self, filepath: Path):
-        """Save custom servers to JSON file.
-
-        Args:
-            filepath: Path to save JSON file
-        """
+        """Save custom servers to JSON file."""
         data = [preset.to_dict() for preset in self._custom_servers]
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
 
     def load_custom_servers(self, filepath: Path):
-        """Load custom servers from JSON file.
-
-        Args:
-            filepath: Path to JSON file
-        """
+        """Load custom servers from JSON file."""
         if not filepath.exists():
             return
 
