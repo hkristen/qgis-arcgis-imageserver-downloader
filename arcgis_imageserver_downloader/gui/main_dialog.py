@@ -81,65 +81,65 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def _init_ui(self):
-        # Main widget
         main_widget = QWidget()
         layout = QVBoxLayout()
+        layout.addWidget(self._build_server_section())
+        layout.addWidget(self._build_services_section())
+        layout.addWidget(self._build_bbox_section())
+        layout.addWidget(self._build_output_section())
+        layout.addWidget(self._build_progress_section())
+        layout.addLayout(self._build_action_buttons())
+        layout.addStretch()
+        main_widget.setLayout(layout)
+        self.setWidget(main_widget)
+        self._populate_server_combo()
 
-        # Server selection section
-        server_group = QGroupBox(self.tr('Server'))
-        server_layout = QVBoxLayout()
+    def _build_server_section(self):
+        group = QGroupBox(self.tr('Server'))
+        row = QHBoxLayout()
+        row.addWidget(QLabel(self.tr('Server:')))
 
-        server_select_layout = QHBoxLayout()
-        server_select_layout.addWidget(QLabel(self.tr('Server:')))
         self.server_combo = QComboBox()
         self.server_combo.currentIndexChanged.connect(self._on_server_changed)
-        server_select_layout.addWidget(self.server_combo, 1)
+        row.addWidget(self.server_combo, 1)
 
         self.add_server_btn = QPushButton('+')
         self.add_server_btn.setMaximumWidth(30)
         self.add_server_btn.setToolTip(self.tr('Add custom server'))
         self.add_server_btn.clicked.connect(self._add_custom_server)
-        server_select_layout.addWidget(self.add_server_btn)
+        row.addWidget(self.add_server_btn)
 
         self.edit_server_btn = QPushButton(self.tr('Edit'))
         self.edit_server_btn.setToolTip(self.tr('Edit or copy server settings'))
         self.edit_server_btn.clicked.connect(self._edit_server)
         self.edit_server_btn.setEnabled(False)
-        server_select_layout.addWidget(self.edit_server_btn)
+        row.addWidget(self.edit_server_btn)
 
-        server_layout.addLayout(server_select_layout)
-        server_group.setLayout(server_layout)
-        layout.addWidget(server_group)
+        layout = QVBoxLayout()
+        layout.addLayout(row)
+        group.setLayout(layout)
+        return group
 
-        # Service browser section
-        services_group = QGroupBox(self.tr('Services'))
-        services_layout = QVBoxLayout()
-
+    def _build_services_section(self):
+        group = QGroupBox(self.tr('Services'))
+        layout = QVBoxLayout()
         self.service_browser = ServiceBrowserWidget()
         self.service_browser.serviceSelected.connect(self._on_service_selected)
-        services_layout.addWidget(self.service_browser)
+        layout.addWidget(self.service_browser)
+        group.setLayout(layout)
+        return group
 
-        services_group.setLayout(services_layout)
-        layout.addWidget(services_group)
+    def _build_bbox_section(self):
+        group = QGroupBox(self.tr('Bounding Box'))
+        layout = QVBoxLayout()
 
-        # Bounding box section
-        bbox_group = QGroupBox(self.tr('Bounding Box'))
-        bbox_layout = QVBoxLayout()
-
-        # Radio buttons for bbox selection method
         self.bbox_button_group = QButtonGroup()
-
         self.bbox_draw_radio = QRadioButton(self.tr('Draw on canvas'))
-        self.bbox_button_group.addButton(self.bbox_draw_radio)
-        bbox_layout.addWidget(self.bbox_draw_radio)
-
         self.bbox_layer_radio = QRadioButton(self.tr('From active layer extent'))
-        self.bbox_button_group.addButton(self.bbox_layer_radio)
-        bbox_layout.addWidget(self.bbox_layer_radio)
-
         self.bbox_manual_radio = QRadioButton(self.tr('Manual coordinates'))
-        self.bbox_button_group.addButton(self.bbox_manual_radio)
-        bbox_layout.addWidget(self.bbox_manual_radio)
+        for btn in (self.bbox_draw_radio, self.bbox_layer_radio, self.bbox_manual_radio):
+            self.bbox_button_group.addButton(btn)
+            layout.addWidget(btn)
 
         # Connect toggled signals after setChecked to avoid stealing map tool on init
         self.bbox_draw_radio.setChecked(True)
@@ -147,134 +147,111 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         self.bbox_layer_radio.toggled.connect(self._on_bbox_method_changed)
         self.bbox_manual_radio.toggled.connect(self._on_bbox_method_changed)
 
-        # Manual bbox input (initially hidden)
+        # Manual coordinate inputs (initially hidden)
         self.bbox_manual_widget = QWidget()
-        bbox_manual_layout = QVBoxLayout()
-        bbox_manual_layout.setContentsMargins(20, 0, 0, 0)
+        manual_layout = QVBoxLayout()
+        manual_layout.setContentsMargins(20, 0, 0, 0)
 
-        bbox_coords_layout = QHBoxLayout()
-        bbox_coords_layout.addWidget(QLabel(self.tr('Min X:')))
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel(self.tr('Min X:')))
         self.bbox_minx = QLineEdit()
-        bbox_coords_layout.addWidget(self.bbox_minx)
-        bbox_coords_layout.addWidget(QLabel(self.tr('Min Y:')))
+        row1.addWidget(self.bbox_minx)
+        row1.addWidget(QLabel(self.tr('Min Y:')))
         self.bbox_miny = QLineEdit()
-        bbox_coords_layout.addWidget(self.bbox_miny)
-        bbox_manual_layout.addLayout(bbox_coords_layout)
+        row1.addWidget(self.bbox_miny)
+        manual_layout.addLayout(row1)
 
-        bbox_coords_layout2 = QHBoxLayout()
-        bbox_coords_layout2.addWidget(QLabel(self.tr('Max X:')))
+        row2 = QHBoxLayout()
+        row2.addWidget(QLabel(self.tr('Max X:')))
         self.bbox_maxx = QLineEdit()
-        bbox_coords_layout2.addWidget(self.bbox_maxx)
-        bbox_coords_layout2.addWidget(QLabel(self.tr('Max Y:')))
+        row2.addWidget(self.bbox_maxx)
+        row2.addWidget(QLabel(self.tr('Max Y:')))
         self.bbox_maxy = QLineEdit()
-        bbox_coords_layout2.addWidget(self.bbox_maxy)
-        bbox_manual_layout.addLayout(bbox_coords_layout2)
+        row2.addWidget(self.bbox_maxy)
+        manual_layout.addLayout(row2)
 
-        self.bbox_manual_widget.setLayout(bbox_manual_layout)
+        self.bbox_manual_widget.setLayout(manual_layout)
         self.bbox_manual_widget.setVisible(False)
-        bbox_layout.addWidget(self.bbox_manual_widget)
+        layout.addWidget(self.bbox_manual_widget)
 
-        # Current bbox display
         self.bbox_label = QLabel(self.tr('No bounding box selected'))
         self.bbox_label.setStyleSheet('color: gray; font-style: italic;')
-        bbox_layout.addWidget(self.bbox_label)
+        layout.addWidget(self.bbox_label)
 
-        bbox_group.setLayout(bbox_layout)
-        layout.addWidget(bbox_group)
+        group.setLayout(layout)
+        return group
 
-        # Output settings section
-        output_group = QGroupBox(self.tr('Output Settings'))
-        output_layout = QVBoxLayout()
+    def _build_output_section(self):
+        group = QGroupBox(self.tr('Output Settings'))
+        layout = QVBoxLayout()
 
-        # CRS selection
-        crs_layout = QHBoxLayout()
-        crs_layout.addWidget(QLabel(self.tr('Output CRS:')))
+        crs_row = QHBoxLayout()
+        crs_row.addWidget(QLabel(self.tr('Output CRS:')))
         self.crs_selector = QgsProjectionSelectionWidget()
         self.crs_selector.setCrs(QgsCoordinateReferenceSystem('EPSG:32633'))
-        crs_layout.addWidget(self.crs_selector, 1)
-        output_layout.addLayout(crs_layout)
+        crs_row.addWidget(self.crs_selector, 1)
+        layout.addLayout(crs_row)
 
-        # Output format options
-        output_layout.addWidget(QLabel(self.tr('Output Format:')))
-
+        layout.addWidget(QLabel(self.tr('Output Format:')))
         self.output_format_group = QButtonGroup()
 
         self.tiles_only_radio = QRadioButton(self.tr('Tiles only (no merge)'))
         self.tiles_only_radio.setToolTip(self.tr('Download individual tiles without merging'))
         self.output_format_group.addButton(self.tiles_only_radio, 0)
-        output_layout.addWidget(self.tiles_only_radio)
+        layout.addWidget(self.tiles_only_radio)
 
         self.merge_uncompressed_radio = QRadioButton(self.tr('Merge uncompressed (fast, large file)'))
         self.merge_uncompressed_radio.setToolTip(self.tr('Merge tiles into single GeoTIFF without compression - fastest but largest file'))
         self.output_format_group.addButton(self.merge_uncompressed_radio, 1)
-        output_layout.addWidget(self.merge_uncompressed_radio)
+        layout.addWidget(self.merge_uncompressed_radio)
 
         self.merge_compressed_radio = QRadioButton(self.tr('Merge compressed (recommended)'))
         self.merge_compressed_radio.setToolTip(self.tr('Merge tiles with LZW compression, tiling, and overviews - best balance of speed, size, and performance'))
         self.merge_compressed_radio.setChecked(True)
         self.output_format_group.addButton(self.merge_compressed_radio, 2)
-        output_layout.addWidget(self.merge_compressed_radio)
+        layout.addWidget(self.merge_compressed_radio)
 
-        # Additional options
         self.add_to_canvas_checkbox = QCheckBox(self.tr('Add to canvas'))
         self.add_to_canvas_checkbox.setChecked(True)
-        output_layout.addWidget(self.add_to_canvas_checkbox)
+        layout.addWidget(self.add_to_canvas_checkbox)
 
-        # Output path
-        output_path_layout = QHBoxLayout()
-        output_path_layout.addWidget(QLabel(self.tr('Output:')))
+        path_row = QHBoxLayout()
+        path_row.addWidget(QLabel(self.tr('Output:')))
         self.output_path_edit = QLineEdit()
         self.output_path_edit.setPlaceholderText(self.tr('Select output directory...'))
-        output_path_layout.addWidget(self.output_path_edit, 1)
-
+        path_row.addWidget(self.output_path_edit, 1)
         self.browse_btn = QPushButton('...')
         self.browse_btn.setMaximumWidth(30)
         self.browse_btn.clicked.connect(self._browse_output_dir)
-        output_path_layout.addWidget(self.browse_btn)
+        path_row.addWidget(self.browse_btn)
+        layout.addLayout(path_row)
 
-        output_layout.addLayout(output_path_layout)
+        group.setLayout(layout)
+        return group
 
-        output_group.setLayout(output_layout)
-        layout.addWidget(output_group)
-
-        # Progress section
-        progress_group = QGroupBox(self.tr('Progress'))
-        progress_layout = QVBoxLayout()
-
+    def _build_progress_section(self):
+        group = QGroupBox(self.tr('Progress'))
+        layout = QVBoxLayout()
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
-        progress_layout.addWidget(self.progress_bar)
-
+        layout.addWidget(self.progress_bar)
         self.status_label = QLabel(self.tr('Ready'))
         self.status_label.setStyleSheet('color: gray; font-style: italic;')
-        progress_layout.addWidget(self.status_label)
+        layout.addWidget(self.status_label)
+        group.setLayout(layout)
+        return group
 
-        progress_group.setLayout(progress_layout)
-        layout.addWidget(progress_group)
-
-        # Action buttons
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
+    def _build_action_buttons(self):
+        layout = QHBoxLayout()
+        layout.addStretch()
         self.download_btn = QPushButton(self.tr('Download'))
         self.download_btn.clicked.connect(self._start_download)
-        button_layout.addWidget(self.download_btn)
-
+        layout.addWidget(self.download_btn)
         self.cancel_btn = QPushButton(self.tr('Cancel'))
         self.cancel_btn.clicked.connect(self._cancel_download)
         self.cancel_btn.setEnabled(False)
-        button_layout.addWidget(self.cancel_btn)
-
-        layout.addLayout(button_layout)
-
-        # Add stretch to push everything to top
-        layout.addStretch()
-
-        main_widget.setLayout(layout)
-        self.setWidget(main_widget)
-
-        # Populate server combo
-        self._populate_server_combo()
+        layout.addWidget(self.cancel_btn)
+        return layout
 
     def _load_settings(self):
         """Load saved settings."""
