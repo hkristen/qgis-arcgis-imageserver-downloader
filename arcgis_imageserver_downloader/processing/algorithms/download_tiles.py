@@ -17,7 +17,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 from pathlib import Path
-from typing import Optional
 
 from ...core.arcgis_client import ArcGISClient
 

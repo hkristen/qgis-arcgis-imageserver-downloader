@@ -111,7 +111,7 @@ class ServerDialog(QDialog):
 
         parsed = QUrl(url)
         if not parsed.isValid() or parsed.scheme() not in ('http', 'https'):
-            return None, None
+            return name, None  # name ok, url invalid
 
         return name, url
 
@@ -654,6 +654,12 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                     if self.server_combo.itemData(i) == preset:
                         self.server_combo.setCurrentIndex(i)
                         break
+            elif name:
+                QMessageBox.warning(
+                    self,
+                    self.tr('Invalid Input'),
+                    self.tr('URL must be a valid http or https address.')
+                )
             else:
                 QMessageBox.warning(
                     self,
@@ -716,6 +722,12 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                     if preset and preset.url == url and preset.name == name:
                         self.server_combo.setCurrentIndex(i)
                         break
+            elif name:
+                QMessageBox.warning(
+                    self,
+                    self.tr('Invalid Input'),
+                    self.tr('URL must be a valid http or https address.')
+                )
             else:
                 QMessageBox.warning(
                     self,

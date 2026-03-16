@@ -50,13 +50,12 @@ class ArcGISClient:
         else:
             full_url = url
 
-        req = urllib.request.Request(
-            full_url,
-            headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
-        )
-
         last_error = None
         for attempt in range(max_retry):
+            req = urllib.request.Request(
+                full_url,
+                headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
+            )
             try:
                 with urllib.request.urlopen(req, timeout=30) as response:
                     content = response.read()
@@ -97,11 +96,6 @@ class ArcGISClient:
         else:
             full_url = url
 
-        req = urllib.request.Request(
-            full_url,
-            headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
-        )
-
         last_error = None
         for attempt in range(max_retry):
             req = urllib.request.Request(
@@ -111,12 +105,18 @@ class ArcGISClient:
             try:
                 with urllib.request.urlopen(req, timeout=30) as response:
                     output_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(output_path, 'wb') as f:
-                        while True:
-                            chunk = response.read(65536)
-                            if not chunk:
-                                break
-                            f.write(chunk)
+                    tmp_path = output_path.with_suffix('.tmp')
+                    try:
+                        with open(tmp_path, 'wb') as f:
+                            while True:
+                                chunk = response.read(65536)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                        tmp_path.replace(output_path)
+                    except Exception:
+                        tmp_path.unlink(missing_ok=True)
+                        raise
                     return True
             except urllib.error.URLError as e:
                 last_error = e

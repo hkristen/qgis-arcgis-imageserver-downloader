@@ -3,7 +3,7 @@ Service browser widget for discovering and filtering ArcGIS services
 """
 from typing import Optional, List, Dict
 
-from qgis.PyQt.QtCore import Qt, pyqtSignal, QSortFilterProxyModel, QUrl, QCoreApplication
+from qgis.PyQt.QtCore import Qt, pyqtSignal, QUrl, QCoreApplication
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt.QtWidgets import (
     QWidget,
