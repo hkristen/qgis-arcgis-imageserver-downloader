@@ -99,6 +99,7 @@ class ArcGISImageServerDownloaderPlugin:
         action = QAction(icon, text, parent)
         action.triggered.connect(callback)
         action.setEnabled(enabled_flag)
+        action.setCheckable(True)
 
         if status_tip is not None:
             action.setStatusTip(status_tip)
@@ -116,12 +117,13 @@ class ArcGISImageServerDownloaderPlugin:
         return action
 
     def run(self):
-        """Run method that opens the dock widget."""
+        """Run method that toggles the dock widget."""
         # Import here to avoid circular imports and load GUI only when needed
         from .gui.main_dialog import ArcGISImageServerDockWidget
 
         if self.dock_widget is None:
             self.dock_widget = ArcGISImageServerDockWidget(self.iface)
             self.iface.addDockWidget(self.dock_widget.location, self.dock_widget)
+            self.dock_widget.visibilityChanged.connect(self.actions[0].setChecked)
 
-        self.dock_widget.show()
+        self.dock_widget.setVisible(not self.dock_widget.isVisible())

@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple
 
-from qgis.PyQt.QtCore import Qt, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QCoreApplication, QUrl
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -106,9 +106,14 @@ class ServerDialog(QDialog):
         name = self.name_edit.text().strip()
         url = self.url_edit.text().strip()
 
-        if name and url:
-            return name, url
-        return None, None
+        if not (name and url):
+            return None, None
+
+        parsed = QUrl(url)
+        if not parsed.isValid() or parsed.scheme() not in ('http', 'https'):
+            return None, None
+
+        return name, url
 
 
 class ArcGISImageServerDockWidget(QgsDockWidget):
@@ -188,7 +193,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         server_select_layout.addWidget(self.add_server_btn)
 
         self.edit_server_btn = QPushButton(self.tr('Edit'))
-        self.edit_server_btn.setMaximumWidth(30)
         self.edit_server_btn.setToolTip(self.tr('Edit or copy server settings'))
         self.edit_server_btn.clicked.connect(self._edit_server)
         self.edit_server_btn.setEnabled(False)
@@ -626,7 +630,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             url=''
         )
 
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.Accepted:
             name, url = dialog.get_values()
 
             if name and url:
@@ -679,7 +683,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             url=self.current_preset.url
         )
 
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.Accepted:
             name, url = dialog.get_values()
 
             if name and url:

@@ -14,7 +14,6 @@ class TileDownloadTask(QgsTask):
     """Background task for downloading raster tiles from ArcGIS ImageServer."""
 
     # Signals
-    downloadProgress = pyqtSignal(int, int, str)  # current, total, message
     downloadComplete = pyqtSignal(list)  # list of downloaded file paths
     downloadFailed = pyqtSignal(str)  # error message
 
