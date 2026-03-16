@@ -85,12 +85,17 @@ class COGProcessingTask(QgsTask):
             self._log('Building virtual raster...')
             self.setProgress(0)
 
-            subprocess.run(
-                ['gdalbuildvrt', temp_vrt] + [str(f) for f in self.tile_files],
-                check=True,
-                capture_output=True,
-                text=True
-            )
+            try:
+                subprocess.run(
+                    ['gdalbuildvrt', temp_vrt] + [str(f) for f in self.tile_files],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except subprocess.CalledProcessError as e:
+                self.error_message = f'gdalbuildvrt failed: {e.stderr}'
+                self._log(self.error_message, Qgis.Critical)
+                return False
 
             if self.isCanceled():
                 return False
@@ -99,12 +104,17 @@ class COGProcessingTask(QgsTask):
             self._log(f'Warping to EPSG:{self.epsg}...')
             self.setProgress(33)
 
-            subprocess.run(
-                ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}', '-multi', temp_vrt, temp_warped_vrt],
-                check=True,
-                capture_output=True,
-                text=True
-            )
+            try:
+                subprocess.run(
+                    ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}', '-multi', temp_vrt, temp_warped_vrt],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except subprocess.CalledProcessError as e:
+                self.error_message = f'gdalwarp failed: {e.stderr}'
+                self._log(self.error_message, Qgis.Critical)
+                return False
 
             if self.isCanceled():
                 return False

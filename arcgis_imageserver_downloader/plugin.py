@@ -31,7 +31,7 @@ class ArcGISImageServerDownloaderPlugin:
 
         # Initialize translator
         self.translator = None
-        locale = QSettings().value('locale/userLocale', 'en')[0:2]
+        locale = (QSettings().value('locale/userLocale', 'en') or 'en')[0:2]
         locale_path = self.plugin_dir / 'i18n' / f'arcgis_imageserver_downloader_{locale}.qm'
 
         if locale_path.exists():
@@ -76,6 +76,7 @@ class ArcGISImageServerDownloaderPlugin:
         # Remove dock widget
         if self.dock_widget is not None:
             self.iface.removeDockWidget(self.dock_widget)
+            self.dock_widget.deleteLater()
             self.dock_widget = None
 
         # Remove translator

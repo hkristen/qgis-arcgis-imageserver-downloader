@@ -884,9 +884,9 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         Args:
             tile_files: List of tile file paths
-            output_format: 1=uncompressed, 2=compressed, 3=COG
+            output_format: 1=uncompressed, 2=compressed
         """
-        format_names = {1: self.tr('uncompressed'), 2: self.tr('compressed'), 3: 'COG'}
+        format_names = {1: self.tr('uncompressed'), 2: self.tr('compressed')}
         format_name = format_names.get(output_format, self.tr('merged'))
 
         self.status_label.setText(self.tr('Creating {format} GeoTIFF...').format(format=format_name))
