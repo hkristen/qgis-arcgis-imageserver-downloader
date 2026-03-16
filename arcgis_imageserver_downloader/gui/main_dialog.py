@@ -423,7 +423,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         preset = self.server_combo.itemData(index)
         if preset:
             self.current_preset = preset
-            log(f'Selected server: {preset.name}')
 
             # Update CRS if different
             if preset.default_epsg:
@@ -443,7 +442,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
     def _on_service_selected(self, service: dict):
         self.selected_service = service
-        log(f'Selected service: {service.get("name", "Unknown")}')
 
     def _on_bbox_method_changed(self, checked: bool):
         # Only act on the checked signal, not the unchecked signal
@@ -470,7 +468,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
             self.bbox_tool.bboxDrawn.connect(self._on_bbox_drawn)
 
         self.canvas.setMapTool(self.bbox_tool)
-        log('Bbox drawing tool activated - draw a rectangle on the map')
 
     def _deactivate_bbox_tool(self):
         """Deactivate bbox drawing tool."""
@@ -495,7 +492,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         self.bbox = rect
         self._update_bbox_label()
-        log(f'Bbox selected: {rect.asWktPolygon()}')
 
     def _update_bbox_from_layer(self):
         layer = self.iface.activeLayer()
@@ -524,7 +520,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         self.bbox = extent
         self._update_bbox_label()
-        log(f'Bbox from layer: {extent.asWktPolygon()}')
 
     def _update_bbox_label(self):
         if self.bbox:
@@ -692,45 +687,18 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                 )
 
     def _validate_inputs(self) -> bool:
-        """Validate user inputs before starting download.
-
-        Returns:
-            True if valid
-        """
-        # Check server
-        if not self.current_preset:
-            QMessageBox.warning(self, self.tr('Validation Error'), self.tr('Please select a server.'))
-            return False
-
-        # Check service
         selected_service = self.service_browser.get_selected_service()
-        if not selected_service:
-            QMessageBox.warning(self, self.tr('Validation Error'), self.tr('Please select a service.'))
-            return False
-        if not selected_service.get('base_url'):
-            QMessageBox.warning(self, self.tr('Validation Error'), self.tr('Selected service has no server URL. Please re-select a server.'))
-            return False
-
-        # Check bbox
-        bbox = self._get_bbox()
-        if not bbox:
-            QMessageBox.warning(
-                self,
-                self.tr('Validation Error'),
-                self.tr('Please select a bounding box.')
-            )
-            return False
-
-        # Check output path
-        output_path = self.output_path_edit.text()
-        if not output_path:
-            QMessageBox.warning(
-                self,
-                self.tr('Validation Error'),
-                self.tr('Please select an output directory.')
-            )
-            return False
-
+        checks = [
+            (not self.current_preset, 'Please select a server.'),
+            (not selected_service, 'Please select a service.'),
+            (selected_service and not selected_service.get('base_url'), 'Selected service has no server URL. Please re-select a server.'),
+            (not self._get_bbox(), 'Please select a bounding box.'),
+            (not self.output_path_edit.text(), 'Please select an output directory.'),
+        ]
+        for failed, msg in checks:
+            if failed:
+                QMessageBox.warning(self, self.tr('Validation Error'), self.tr(msg))
+                return False
         return True
 
     def _start_download(self):
@@ -808,8 +776,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         # 0 = tiles only, 1 = uncompressed, 2 = compressed
         if output_format == 0:
-            # Tiles only - no merge
-            log('Tiles only mode - skipping merge')
             self._finish_processing(tile_files)
         elif output_format in [1, 2] and tile_files:
             # Start merge processing
@@ -850,8 +816,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         output_filename = f'{folder_name}_merged_{timestamp}.tif'
         output_cog = self.service_output_dir / output_filename
 
-        log(f'Output will be saved to: {output_cog}')
-
         epsg = self.crs_selector.crs().postgisSrid()
 
         # Create processing task
@@ -871,8 +835,6 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
 
         # Add to task manager
         QgsApplication.taskManager().addTask(self.processing_task)
-
-        log(f'Starting {format_name} GeoTIFF creation')
 
     def _on_processing_progress(self, progress: float):
         self.progress_bar.setValue(int(progress))
@@ -907,25 +869,15 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
         self.progress_bar.setValue(100)
         self.status_label.setText(self.tr('Complete!'))
 
-        log(f'Finishing processing with {len(output_files)} output file(s)')
-
         # Add to canvas if requested
         if self.add_to_canvas_checkbox.isChecked() and output_files:
-            log(f'Add to canvas is enabled, processing {len(output_files)} files')
             for output_file in output_files:
                 output_path = Path(output_file)
-                log(f'Checking output file: {output_path}')
-                log(f'File exists: {output_path.exists()}')
-
                 if output_path.exists() and output_path.suffix.lower() in ['.tif', '.tiff']:
-                    # Create raster layer
                     layer_name = output_path.stem
-                    log(f'Creating raster layer: {layer_name}')
                     layer = QgsRasterLayer(str(output_path), layer_name)
-
                     if layer.isValid():
                         QgsProject.instance().addMapLayer(layer)
-                        log(f'Added layer to canvas: {layer_name}')
                         self.iface.messageBar().pushMessage(
                             self.tr('Success'),
                             self.tr('Added layer: {name}').format(name=layer_name),
@@ -935,16 +887,8 @@ class ArcGISImageServerDockWidget(QgsDockWidget):
                     else:
                         log(f'Failed to load layer: {output_path}', Qgis.Warning)
                         log(f'Layer error: {layer.error().message()}', Qgis.Warning)
-                else:
-                    if not output_path.exists():
-                        log(f'Output file does not exist: {output_path}', Qgis.Warning)
-                    else:
-                        log(f'Skipping non-TIFF file: {output_path}', Qgis.Info)
-        else:
-            if not self.add_to_canvas_checkbox.isChecked():
-                log('Add to canvas is disabled')
-            if not output_files:
-                log('No output files to add')
+                elif not output_path.exists():
+                    log(f'Output file does not exist: {output_path}', Qgis.Warning)
 
         # Show completion message with file location
         if output_files:
