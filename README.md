@@ -52,8 +52,8 @@ Restart QGIS and enable the plugin in **Plugins > Manage and Install Plugins**.
 
 5. **Configure Output:**
    - Click [...] to choose output folder
-   - Check: Create COG
-   - Check: Add to canvas
+   - Select output format (e.g., "Merge compressed")
+   - Check "Add to canvas"
 
 6. **Download:** Click the Download button and wait for completion
 
@@ -74,9 +74,8 @@ Restart QGIS and enable the plugin in **Plugins > Manage and Install Plugins**.
 
 6. Configure output settings:
    - Output CRS (EPSG code)
-   - Create COG (recommended for web use)
+   - Output format: Tiles only, Merge uncompressed, or Merge compressed (recommended)
    - Add to canvas (automatically load result)
-   - Keep raw tiles (preserve individual tiles)
 
 7. Choose output directory
 
@@ -161,12 +160,10 @@ iface.addRasterLayer('/tmp/output.tif', 'Orthophoto 2019-2021')
 2. Enter:
    - Name (display name)
    - URL (ArcGIS REST services endpoint)
-   - Default EPSG code
-   - Description (optional)
 
 3. Click OK
 
-Custom servers are saved in `~/.qgis/arcgis_imageserver_custom_servers.json`
+Custom servers are saved in your QGIS settings directory as `arcgis_imageserver_custom_servers.json`.
 
 ## Common Workflows
 
@@ -242,8 +239,8 @@ The plugin uses QGIS's Qt compatibility layer and works seamlessly with both Qt5
 
 ### Performance
 - Use smaller bounding boxes for faster downloads
-- Enable "Keep raw tiles" only if you need them (saves space)
-- COG creation is automatic but can be skipped for speed
+- Select "Tiles only" to skip merging for faster results
+- "Merge compressed" adds LZW compression, tiling, and overviews for best file size and performance
 
 ### CRS Selection
 - Match your project CRS for seamless integration
@@ -266,4 +263,4 @@ GNU General Public License v2.0
 
 ## Support
 
-For issues and feature requests, please use the [GitHub issue tracker](https://github.com/yourusername/qgis-arcgis-imageserver-downloader/issues).
+For issues and feature requests, please use the [GitHub issue tracker](https://github.com/hkristen/qgis-arcgis-imageserver-downloader/issues).
