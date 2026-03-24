@@ -67,12 +67,9 @@ class BBoxMapTool(QgsMapTool):
             # Create final rectangle
             rect = QgsRectangle(self.start_point, self.end_point)
 
-            # Emit signal with bbox
+            # Emit signal with bbox (rubber band stays visible until next draw)
             if not rect.isEmpty():
                 self.bboxDrawn.emit(rect)
-
-            # Clear rubber band
-            self.rubber_band.reset(Qgis.GeometryType.Polygon)
 
     def _update_rubber_band(self, rect):
         if rect.isEmpty():

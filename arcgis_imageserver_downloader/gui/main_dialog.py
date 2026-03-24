@@ -93,6 +93,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         main_widget.setLayout(layout)
         self.setWidget(main_widget)
         self._populate_server_combo()
+        self._activate_bbox_tool()
 
     def _build_server_section(self):
         group = QGroupBox(self.tr('Server'))

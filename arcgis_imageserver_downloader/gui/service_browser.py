@@ -169,6 +169,7 @@ class ServiceBrowserWidget(QWidget):
             self.status_label.setText(self.tr('Service fetch cancelled'))
 
     def _populate_table(self):
+        self.service_table.blockSignals(True)
         self.service_table.setSortingEnabled(False)
         self.service_table.setRowCount(len(self.filtered_services))
 
@@ -196,6 +197,7 @@ class ServiceBrowserWidget(QWidget):
 
         self.service_table.setSortingEnabled(True)
         self.service_table.sortItems(0, Qt.AscendingOrder)
+        self.service_table.blockSignals(False)
 
     def _filter_services(self, text: str):
         text = text.lower()

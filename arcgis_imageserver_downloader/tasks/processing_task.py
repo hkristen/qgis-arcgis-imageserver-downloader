@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from qgis.core import QgsTask, Qgis
 
-from ..utils import log
+from ..utils import log, subprocess_run_kwargs
 from qgis.PyQt.QtCore import pyqtSignal
 
 
@@ -63,9 +63,7 @@ class COGProcessingTask(QgsTask):
             try:
                 subprocess.run(
                     ['gdalbuildvrt', temp_vrt] + [str(f) for f in self.tile_files],
-                    check=True,
-                    capture_output=True,
-                    text=True
+                    **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdalbuildvrt failed: {e.stderr}'
@@ -82,9 +80,7 @@ class COGProcessingTask(QgsTask):
             try:
                 subprocess.run(
                     ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}', '-multi', temp_vrt, temp_warped_vrt],
-                    check=True,
-                    capture_output=True,
-                    text=True
+                    **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdalwarp failed: {e.stderr}'
@@ -127,12 +123,7 @@ class COGProcessingTask(QgsTask):
             translate_cmd += [temp_warped_vrt, str(self.output_cog)]
 
             try:
-                subprocess.run(
-                    translate_cmd,
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
+                subprocess.run(translate_cmd, **subprocess_run_kwargs())
             except subprocess.CalledProcessError as e:
                 self.error_message = f'gdal_translate failed: {e.stderr}'
                 log(self.error_message, Qgis.Critical)
@@ -149,9 +140,7 @@ class COGProcessingTask(QgsTask):
                 try:
                     subprocess.run(
                         ['gdaladdo', '-r', 'nearest', str(self.output_cog), '2', '4', '8', '16'],
-                        check=True,
-                        capture_output=True,
-                        text=True
+                        **subprocess_run_kwargs()
                     )
                     log('Overviews added successfully')
                 except subprocess.CalledProcessError as e:

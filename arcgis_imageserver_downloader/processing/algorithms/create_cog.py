@@ -19,6 +19,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
+from ...utils import subprocess_run_kwargs
+
 
 class CreateCOGAlgorithm(QgsProcessingAlgorithm):
     """Create Cloud Optimized GeoTIFF from raster tiles."""
@@ -143,7 +145,7 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             try:
                 subprocess.run(
                     ['gdalbuildvrt', temp_vrt] + [str(f) for f in tile_files],
-                    check=True, capture_output=True, text=True
+                    **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
                 raise QgsProcessingException(self.tr('gdalbuildvrt failed: {0}').format(e.stderr))
@@ -157,7 +159,7 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             try:
                 subprocess.run(
                     ['gdalwarp', '-t_srs', f'EPSG:{epsg}', '-multi', temp_vrt, temp_warped],
-                    check=True, capture_output=True, text=True
+                    **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
                 raise QgsProcessingException(self.tr('gdalwarp failed: {0}').format(e.stderr))
@@ -171,7 +173,7 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             try:
                 subprocess.run(
                     ['gdaladdo', '-r', 'nearest', temp_warped, '2', '4', '8', '16', '32'],
-                    check=True, capture_output=True, text=True
+                    **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
                 feedback.pushInfo(f'Warning: gdaladdo failed (non-critical): {e.stderr}')
@@ -192,7 +194,7 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             cog_cmd += [temp_warped, output_cog]
 
             try:
-                subprocess.run(cog_cmd, check=True, capture_output=True, text=True)
+                subprocess.run(cog_cmd, **subprocess_run_kwargs())
             except subprocess.CalledProcessError as e:
                 raise QgsProcessingException(self.tr('gdal_translate (COG) failed: {0}').format(e.stderr))
 
