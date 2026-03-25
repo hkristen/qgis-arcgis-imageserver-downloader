@@ -120,5 +120,5 @@ class ArcGISImageServerDownloaderPlugin:
             self.dock_widget = ArcGISImageServerDockWidget(self.iface)
             self.iface.addDockWidget(self.dock_widget.location, self.dock_widget)
             self.dock_widget.visibilityChanged.connect(self.actions[0].setChecked)
-
-        self.dock_widget.setVisible(not self.dock_widget.isVisible())
+        else:
+            self.dock_widget.setVisible(not self.dock_widget.isVisible())
