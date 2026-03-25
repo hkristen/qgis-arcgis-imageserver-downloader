@@ -261,10 +261,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         if last_output_dir:
             self.output_path_edit.setText(last_output_dir)
 
-        # Load last server
+        # Defer server selection so the widget is shown before fetching starts
         last_server_url = self.settings.get_last_server_url()
         if last_server_url:
-            self._select_combo_by(last_server_url)
+            QTimer.singleShot(0, lambda: self._select_combo_by(last_server_url))
 
         # Load default EPSG
         default_epsg = self.settings.get_default_epsg()
