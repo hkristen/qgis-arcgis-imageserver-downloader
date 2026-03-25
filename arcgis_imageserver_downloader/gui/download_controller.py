@@ -187,3 +187,7 @@ class DownloadControllerMixin:
             completion_msg = self.tr('Download and processing completed successfully!')
 
         QMessageBox.information(self, self.tr('Complete'), completion_msg)
+
+        # Restore service selection after modal dialog returns focus to the dock
+        if self.selected_service:
+            self.service_browser.restore_selection(self.selected_service['name'])
