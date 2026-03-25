@@ -65,6 +65,9 @@ class DownloadControllerMixin:
         QgsApplication.taskManager().addTask(self.download_task)
         log(f'Starting download for service: {service_name}')
 
+        # Restore service selection in case addTask event processing changed it
+        self.service_browser.restore_selection(service_name)
+
     def _cancel_download(self):
         if self.download_task:
             try:

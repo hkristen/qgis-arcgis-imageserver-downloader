@@ -127,10 +127,22 @@ class ArcGISClient:
             log('No ImageServer services found')
             return []
 
-        # Parse service information
+        # Parse service information, filtering to only services that support Download
         parsed_services = []
         for service in imageserver_services:
             name = service.get('name', '')
+
+            # Check if the service supports Download capability
+            image_server_url = f"{base_url.rstrip('/')}/{name}/ImageServer"
+            try:
+                meta = self._make_request(image_server_url, {'f': 'json'})
+                capabilities = meta.get('capabilities', '')
+                if 'Download' not in capabilities:
+                    log(f'Skipping {name}: no Download capability ({capabilities})')
+                    continue
+            except Exception as e:
+                log(f'Skipping {name}: failed to fetch metadata: {e}', Qgis.Warning)
+                continue
 
             parsed = {
                 'name': name,

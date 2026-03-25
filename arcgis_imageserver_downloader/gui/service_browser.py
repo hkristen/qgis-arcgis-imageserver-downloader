@@ -261,6 +261,19 @@ class ServiceBrowserWidget(QWidget):
 
         return None
 
+    def restore_selection(self, service_name: str):
+        """Re-select a row by its full service name without emitting serviceSelected."""
+        for row in range(self.service_table.rowCount()):
+            item = self.service_table.item(row, 0)
+            if item:
+                svc = item.data(Qt.UserRole)
+                if svc and svc.get('name') == service_name:
+                    self.service_table.blockSignals(True)
+                    self.service_table.selectRow(row)
+                    self.service_table.scrollToItem(item)
+                    self.service_table.blockSignals(False)
+                    return
+
     def clear(self):
         self.services = []
         self.filtered_services = []

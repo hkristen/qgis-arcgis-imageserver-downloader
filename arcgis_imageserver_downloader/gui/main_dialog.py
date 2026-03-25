@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple
 
-from qgis.PyQt.QtCore import Qt, QCoreApplication
+from qgis.PyQt.QtCore import Qt, QCoreApplication, QTimer
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -379,6 +379,12 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
 
         self.bbox = rect
         self._update_bbox_label()
+
+        # Restore service selection after any deferred focus/mouse events
+        # that may have disrupted the table selection during canvas drawing
+        if self.selected_service:
+            name = self.selected_service.get('name', '')
+            QTimer.singleShot(0, lambda: self.service_browser.restore_selection(name))
 
     def _update_bbox_from_layer(self):
         layer = self.iface.activeLayer()
