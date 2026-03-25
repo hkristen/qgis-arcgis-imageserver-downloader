@@ -6,6 +6,7 @@ import re
 import urllib.request
 import urllib.parse
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -127,22 +128,19 @@ class ArcGISClient:
             log('No ImageServer services found')
             return []
 
-        # Parse service information, filtering to only services that support Download
-        parsed_services = []
-        for service in imageserver_services:
+        # Check Download capability for all services in parallel, then parse
+        def check_and_parse(service):
             name = service.get('name', '')
-
-            # Check if the service supports Download capability
             image_server_url = f"{base_url.rstrip('/')}/{name}/ImageServer"
             try:
                 meta = self._make_request(image_server_url, {'f': 'json'})
                 capabilities = meta.get('capabilities', '')
                 if 'Download' not in capabilities:
                     log(f'Skipping {name}: no Download capability ({capabilities})')
-                    continue
+                    return None
             except Exception as e:
                 log(f'Skipping {name}: failed to fetch metadata: {e}', Qgis.Warning)
-                continue
+                return None
 
             parsed = {
                 'name': name,
@@ -152,7 +150,6 @@ class ArcGISClient:
                 'year': None
             }
 
-            # Split name into category and service_name if it contains '/'
             if '/' in name:
                 parts = name.split('/', 1)
                 parsed['category'] = parts[0]
@@ -160,12 +157,20 @@ class ArcGISClient:
             else:
                 parsed['service_name'] = name
 
-            # Extract year from service name (4 digits)
             year_match = re.search(r'(\d{4})', parsed['service_name'])
             if year_match:
                 parsed['year'] = year_match.group(1)
 
-            parsed_services.append(parsed)
+            return parsed
+
+        max_workers = min(16, len(imageserver_services))
+        parsed_services = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(check_and_parse, s): s for s in imageserver_services}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    parsed_services.append(result)
 
         # Sort by category and service_name
         parsed_services.sort(key=lambda x: (x['category'], x['service_name']))
