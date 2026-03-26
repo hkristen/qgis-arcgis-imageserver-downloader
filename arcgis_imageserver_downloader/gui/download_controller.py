@@ -126,11 +126,14 @@ class DownloadControllerMixin:
         output_cog = self.service_output_dir / f'{folder_name}_merged_{timestamp}.tif'
         epsg = self.crs_selector.crs().postgisSrid()
 
+        compression = self._compression_options[self.compression_combo.currentIndex()][1] if output_format == 2 else 'LZW'
+
         self.processing_task = COGProcessingTask(
             tile_files=[Path(f) for f in tile_files],
             output_cog=output_cog,
             epsg=epsg,
-            output_format=output_format
+            output_format=output_format,
+            compression=compression
         )
 
         self.processing_task.progressChanged.connect(self._on_processing_progress)

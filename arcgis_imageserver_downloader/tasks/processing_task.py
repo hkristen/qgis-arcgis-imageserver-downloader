@@ -27,6 +27,7 @@ class COGProcessingTask(QgsTask):
         epsg: int = 32633,
         nodata: Optional[float] = None,
         output_format: int = 2,
+        compression: str = 'LZW',
         description: str = 'Creating GeoTIFF'
     ):
         """Initialize merge processing task."""
@@ -38,6 +39,7 @@ class COGProcessingTask(QgsTask):
         self.epsg = epsg
         self.nodata = nodata
         self.output_format = output_format
+        self.compression = compression
 
         # Task state
         self.error_message = None
@@ -91,8 +93,8 @@ class COGProcessingTask(QgsTask):
                 return False
 
             # Step 3: Create output GeoTIFF based on format selection
-            format_names = {1: 'uncompressed', 2: 'compressed'}
-            format_name = format_names.get(self.output_format, 'compressed')
+            format_names = {1: 'uncompressed', 2: self.compression}
+            format_name = format_names.get(self.output_format, self.compression)
             log(f'Creating {format_name} GeoTIFF...')
             self.setProgress(66)
 
@@ -112,7 +114,7 @@ class COGProcessingTask(QgsTask):
             else:
                 translate_cmd = [
                     'gdal_translate',
-                    '-co', 'COMPRESS=LZW',
+                    '-co', f'COMPRESS={self.compression}',
                     '-co', 'TILED=YES',
                     '-co', 'BIGTIFF=YES',
                 ]
@@ -137,9 +139,10 @@ class COGProcessingTask(QgsTask):
                 log('Adding overviews...')
                 self.setProgress(85)
 
+                overview_resampling = 'average' if self.compression == 'JPEG' else 'nearest'
                 try:
                     subprocess.run(
-                        ['gdaladdo', '-r', 'nearest', str(self.output_cog), '2', '4', '8', '16'],
+                        ['gdaladdo', '-r', overview_resampling, str(self.output_cog), '2', '4', '8', '16'],
                         **subprocess_run_kwargs()
                     )
                     log('Overviews added successfully')

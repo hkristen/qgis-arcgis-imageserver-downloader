@@ -39,6 +39,9 @@ class PluginSettings:
     def get_output_format(self) -> int: return self.settings.value(self._key('output_format'), 2, type=int)
     def set_output_format(self, value: int): self.set('output_format', value)
 
+    def get_compression(self) -> str: return self.settings.value(self._key('compression'), 'LZW')
+    def set_compression(self, value: str): self.set('compression', value)
+
     def get_add_to_canvas(self) -> bool: return self.settings.value(self._key('add_to_canvas'), True, type=bool)
     def set_add_to_canvas(self, value: bool): self.set('add_to_canvas', value)
 

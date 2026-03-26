@@ -197,20 +197,40 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         self.output_format_group = QButtonGroup()
 
         self.tiles_only_radio = QRadioButton(self.tr('Tiles only (no merge)'))
-        self.tiles_only_radio.setToolTip(self.tr('Download individual tiles without merging'))
         self.output_format_group.addButton(self.tiles_only_radio, 0)
         layout.addWidget(self.tiles_only_radio)
 
-        self.merge_uncompressed_radio = QRadioButton(self.tr('Merge uncompressed (fast, large file)'))
-        self.merge_uncompressed_radio.setToolTip(self.tr('Merge tiles into single GeoTIFF without compression - fastest but largest file'))
+        self.merge_uncompressed_radio = QRadioButton(self.tr('Merge uncompressed'))
         self.output_format_group.addButton(self.merge_uncompressed_radio, 1)
         layout.addWidget(self.merge_uncompressed_radio)
 
-        self.merge_compressed_radio = QRadioButton(self.tr('Merge compressed (recommended)'))
-        self.merge_compressed_radio.setToolTip(self.tr('Merge tiles with LZW compression, tiling, and overviews - best balance of speed, size, and performance'))
+        compressed_row = QHBoxLayout()
+        self.merge_compressed_radio = QRadioButton(self.tr('Merge compressed'))
         self.merge_compressed_radio.setChecked(True)
         self.output_format_group.addButton(self.merge_compressed_radio, 2)
-        layout.addWidget(self.merge_compressed_radio)
+        compressed_row.addWidget(self.merge_compressed_radio)
+
+        self.compression_combo = QComboBox()
+        self._compression_options = [
+            ('LZW', 'LZW'),
+            ('DEFLATE', 'DEFLATE'),
+            ('ZSTD', 'ZSTD'),
+            ('JPEG (lossy)', 'JPEG'),
+        ]
+        for label, _ in self._compression_options:
+            self.compression_combo.addItem(label)
+        compressed_row.addWidget(self.compression_combo)
+        compressed_row.addStretch()
+        layout.addLayout(compressed_row)
+
+        self.format_description_label = QLabel()
+        self.format_description_label.setStyleSheet('color: gray; font-style: italic;')
+        self.format_description_label.setWordWrap(True)
+        layout.addWidget(self.format_description_label)
+
+        self.output_format_group.idToggled.connect(self._update_format_description)
+        self.compression_combo.currentIndexChanged.connect(self._update_format_description)
+        self._update_format_description()
 
         self.add_to_canvas_checkbox = QCheckBox(self.tr('Add to canvas'))
         self.add_to_canvas_checkbox.setChecked(True)
@@ -254,6 +274,27 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         layout.addWidget(self.cancel_btn)
         return layout
 
+    def _update_format_description(self, *_):
+        fmt = self.output_format_group.checkedId()
+        is_compressed = fmt == 2
+        self.compression_combo.setEnabled(is_compressed)
+
+        if fmt == 0:
+            text = self.tr('Downloads tiles as individual files into the output folder. No merging or processing is done.')
+        elif fmt == 1:
+            text = self.tr('Merges all tiles into a single GeoTIFF using gdalbuildvrt + gdalwarp + gdal_translate. No compression applied — fastest processing, largest output file.')
+        else:
+            idx = self.compression_combo.currentIndex()
+            _, gdal_val = self._compression_options[idx]
+            descriptions = {
+                'LZW': self.tr('LZW: lossless compression, widely supported. Adds internal tiling and overview levels for fast display at any zoom. Good default for most raster types.'),
+                'DEFLATE': self.tr('DEFLATE: lossless compression, similar to LZW but slightly higher ratio. Adds internal tiling and overviews. Good alternative if your tools prefer DEFLATE.'),
+                'ZSTD': self.tr('ZSTD: lossless compression with better ratios than LZW/DEFLATE. Adds internal tiling and overviews. Requires GDAL ≥ 2.3.'),
+                'JPEG': self.tr('JPEG: lossy compression, much smaller files. Suitable for RGB imagery only — not for elevation, float, or single-band analytical data. Adds internal tiling and overviews.'),
+            }
+            text = descriptions.get(gdal_val, '')
+        self.format_description_label.setText(text)
+
     def _load_settings(self):
         """Load saved settings."""
         # Load last output directory
@@ -277,8 +318,13 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         elif output_format == 1:
             self.merge_uncompressed_radio.setChecked(True)
         else:
-            # Default to compressed (format 2 or anything else)
             self.merge_compressed_radio.setChecked(True)
+
+        # Load compression choice
+        saved_compression = self.settings.get_compression()
+        gdal_values = [v for _, v in self._compression_options]
+        if saved_compression in gdal_values:
+            self.compression_combo.setCurrentIndex(gdal_values.index(saved_compression))
 
         # Load checkbox states
         self.add_to_canvas_checkbox.setChecked(self.settings.get_add_to_canvas())
@@ -302,6 +348,10 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
 
         # Save output format
         self.settings.set_output_format(self.output_format_group.checkedId())
+
+        # Save compression choice
+        _, gdal_val = self._compression_options[self.compression_combo.currentIndex()]
+        self.settings.set_compression(gdal_val)
 
         # Save checkbox states
         self.settings.set_add_to_canvas(self.add_to_canvas_checkbox.isChecked())
