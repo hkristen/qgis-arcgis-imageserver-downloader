@@ -166,6 +166,10 @@ Custom servers are saved in your QGIS settings directory as `arcgis_imageserver_
 - Cancelled downloads retain partial tiles; re-running skips already-downloaded tiles
 - Use the Processing framework or Model Builder to automate multi-service batch downloads
 
+## Acknowledgments
+
+Built by [Harald Kristen](https://hkristen.at) with [Claude](https://claude.ai) as an AI pair-programmer. The plugin architecture, GUI, and Processing algorithms were developed iteratively with human-in-the-loop feedback and review.
+
 ## License
 
 GNU General Public License v2.0
