@@ -1,7 +1,7 @@
 """
 Map tool for drawing bounding box on canvas
 """
-from qgis.PyQt.QtCore import pyqtSignal, Qt
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QColor
 from .compat import CrossCursor, LeftButton, Key_Escape
 from qgis.core import (

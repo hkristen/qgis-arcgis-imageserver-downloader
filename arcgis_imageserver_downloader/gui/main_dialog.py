@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple
 
-from qgis.PyQt.QtCore import Qt, QCoreApplication, QTimer
+from qgis.PyQt.QtCore import QCoreApplication, QTimer
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,

@@ -22,5 +22,3 @@ experimental=False
 deprecated=False
 changelog=0.1.0 - Initial release
 
-# Qt5 and Qt6 compatible (QGIS 3.40+ and 4.0+)
-supportsQt6=True

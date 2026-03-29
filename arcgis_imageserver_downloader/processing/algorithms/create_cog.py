@@ -13,9 +13,7 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
     QgsProcessingParameterBoolean,
-    QgsProcessingException,
-    QgsProcessingContext,
-    QgsProcessingFeedback
+    QgsProcessingException
 )
 from qgis.PyQt.QtCore import QCoreApplication
 

@@ -2,7 +2,7 @@
 QgsTask for downloading raster tiles in background
 """
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from qgis.core import QgsTask, Qgis
 

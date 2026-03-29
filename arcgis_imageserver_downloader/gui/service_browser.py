@@ -1,9 +1,9 @@
 """
 Service browser widget for discovering and filtering ArcGIS services
 """
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 
-from qgis.PyQt.QtCore import Qt, pyqtSignal, QUrl, QCoreApplication
+from qgis.PyQt.QtCore import pyqtSignal, QUrl, QCoreApplication
 from .compat import UserRole, AscendingOrder, SelectRows, SingleSelection, NoEditTriggers, HeaderStretch, ResizeToContents, HeaderFixed
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt.QtWidgets import (
@@ -15,7 +15,6 @@ from qgis.PyQt.QtWidgets import (
     QLineEdit,
     QLabel,
     QPushButton,
-    QHeaderView,
     QMessageBox
 )
 from qgis.core import Qgis, QgsTask, QgsApplication

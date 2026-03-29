@@ -1,7 +1,6 @@
 """
 Main plugin class for ArcGIS ImageServer Downloader
 """
-import os
 from pathlib import Path
 
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator, QSettings

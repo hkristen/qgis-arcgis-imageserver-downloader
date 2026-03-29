@@ -34,6 +34,10 @@ class ArcGISClient:
         else:
             full_url = url
 
+        parsed = urllib.parse.urlparse(full_url)
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
+
         last_error = None
         for attempt in range(max_retry):
             req = urllib.request.Request(
@@ -41,7 +45,7 @@ class ArcGISClient:
                 headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
             )
             try:
-                with urllib.request.urlopen(req, timeout=30) as response:
+                with urllib.request.urlopen(req, timeout=30) as response:  # nosec B310
                     content = response.read()
                     try:
                         return json.loads(content.decode('utf-8'))
@@ -67,6 +71,10 @@ class ArcGISClient:
         else:
             full_url = url
 
+        parsed = urllib.parse.urlparse(full_url)
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
+
         last_error = None
         for attempt in range(max_retry):
             req = urllib.request.Request(
@@ -74,7 +82,7 @@ class ArcGISClient:
                 headers={'User-Agent': 'QGIS ArcGIS ImageServer Downloader'}
             )
             try:
-                with urllib.request.urlopen(req, timeout=30) as response:
+                with urllib.request.urlopen(req, timeout=30) as response:  # nosec B310
                     output_path.parent.mkdir(parents=True, exist_ok=True)
                     tmp_path = output_path.with_suffix('.tmp')
                     try:

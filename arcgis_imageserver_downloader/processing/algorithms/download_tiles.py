@@ -7,10 +7,7 @@ from qgis.core import (
     QgsProcessingParameterVectorLayer,
     QgsProcessingParameterFolderDestination,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterBoolean,
     QgsProcessingException,
-    QgsProcessingContext,
-    QgsProcessingFeedback,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsProject
@@ -163,7 +160,7 @@ Example:
             # Download service metadata
             metadata_path = output_dir / f'{service_name.replace("/", "_")}.json'
             client.get_service_metadata(url, service_name, metadata_path)
-            feedback.pushInfo(f'Saved service metadata')
+            feedback.pushInfo('Saved service metadata')
 
             # Download tiles
             downloaded_files = []
