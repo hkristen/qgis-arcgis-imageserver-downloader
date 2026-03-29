@@ -21,6 +21,7 @@ from qgis.PyQt.QtWidgets import (
     QProgressBar,
     QMessageBox,
     QGroupBox,
+    QScrollArea,
 )
 from qgis.gui import QgsDockWidget, QgsProjectionSelectionWidget
 from qgis.core import (
@@ -36,12 +37,13 @@ from .service_browser import ServiceBrowserWidget
 from .bbox_tool import BBoxMapTool
 from .server_management import ServerManagerMixin, custom_servers_path
 from .download_controller import DownloadControllerMixin
+from .compat import RightDockWidgetArea, FrameNoFrame
 
 
 class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadControllerMixin):
     """Dockable widget for ArcGIS ImageServer Downloader."""
 
-    location = Qt.RightDockWidgetArea
+    location = RightDockWidgetArea
 
     def __init__(self, iface):
         """Initialize the dock widget.
@@ -81,17 +83,27 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
 
     def _init_ui(self):
-        main_widget = QWidget()
+        content = QWidget()
         layout = QVBoxLayout()
         layout.addWidget(self._build_server_section())
-        layout.addWidget(self._build_services_section())
+
+        services_group = self._build_services_section()
+        services_group.setMinimumHeight(150)
+        services_group.setMaximumHeight(220)
+        layout.addWidget(services_group)
+
         layout.addWidget(self._build_bbox_section())
         layout.addWidget(self._build_output_section())
         layout.addWidget(self._build_progress_section())
-        layout.addLayout(self._build_action_buttons())
-        layout.addStretch()
-        main_widget.setLayout(layout)
-        self.setWidget(main_widget)
+        layout.addWidget(self._build_action_buttons())
+        layout.addSpacing(12)
+        content.setLayout(layout)
+
+        scroll = QScrollArea()
+        scroll.setWidget(content)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(FrameNoFrame)
+        self.setWidget(scroll)
         self._populate_server_combo()
         self._activate_bbox_tool()
 
@@ -263,6 +275,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         return group
 
     def _build_action_buttons(self):
+        widget = QWidget()
         layout = QHBoxLayout()
         layout.addStretch()
         self.download_btn = QPushButton(self.tr('Download'))
@@ -272,7 +285,8 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         self.cancel_btn.clicked.connect(self._cancel_download)
         self.cancel_btn.setEnabled(False)
         layout.addWidget(self.cancel_btn)
-        return layout
+        widget.setLayout(layout)
+        return widget
 
     def _update_format_description(self, *_):
         fmt = self.output_format_group.checkedId()

@@ -8,6 +8,7 @@ from qgis.PyQt.QtWidgets import (
     QLineEdit,
     QMessageBox,
 )
+from .compat import DialogOk, DialogCancel, DialogAccepted
 from qgis.core import QgsApplication
 
 from ..core.service_manager import ServicePreset
@@ -37,7 +38,7 @@ class ServerDialog(QDialog):
         self.url_edit.setPlaceholderText(self.tr('e.g., https://example.com/arcgis/rest/services'))
         layout.addRow(self.tr('Server URL:'), self.url_edit)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(DialogOk | DialogCancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addRow(button_box)
@@ -91,7 +92,7 @@ class ServerManagerMixin:
     def _add_custom_server(self):
         dialog = ServerDialog(parent=self, title=self.tr('Add Custom Server'))
 
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == DialogAccepted:
             name, url = dialog.get_values()
 
             if name and url:
@@ -127,7 +128,7 @@ class ServerManagerMixin:
             url=self.current_preset.url
         )
 
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == DialogAccepted:
             name, url = dialog.get_values()
 
             if name and url:

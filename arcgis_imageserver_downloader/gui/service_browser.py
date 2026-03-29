@@ -4,6 +4,7 @@ Service browser widget for discovering and filtering ArcGIS services
 from typing import Optional, List, Dict
 
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QUrl, QCoreApplication
+from .compat import UserRole, AscendingOrder, SelectRows, SingleSelection, NoEditTriggers, HeaderStretch, ResizeToContents, HeaderFixed
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt.QtWidgets import (
     QWidget,
@@ -86,17 +87,17 @@ class ServiceBrowserWidget(QWidget):
             self.tr('Year'),
             self.tr('Info')
         ])
-        self.service_table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.service_table.setSelectionMode(QTableWidget.SingleSelection)
-        self.service_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.service_table.setSelectionBehavior(SelectRows)
+        self.service_table.setSelectionMode(SingleSelection)
+        self.service_table.setEditTriggers(NoEditTriggers)
         self.service_table.setSortingEnabled(True)
 
         # Set column widths
         header = self.service_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.Fixed)
+        header.setSectionResizeMode(0, HeaderStretch)
+        header.setSectionResizeMode(1, ResizeToContents)
+        header.setSectionResizeMode(2, ResizeToContents)
+        header.setSectionResizeMode(3, HeaderFixed)
         header.resizeSection(3, 50)
 
         # Connect selection signal
@@ -176,7 +177,7 @@ class ServiceBrowserWidget(QWidget):
         for row, service in enumerate(self.filtered_services):
             # Service name
             name_item = QTableWidgetItem(service.get('service_name', ''))
-            name_item.setData(Qt.UserRole, service)
+            name_item.setData(UserRole, service)
             self.service_table.setItem(row, 0, name_item)
 
             # Category
@@ -196,7 +197,7 @@ class ServiceBrowserWidget(QWidget):
             self.service_table.setCellWidget(row, 3, info_btn)
 
         self.service_table.setSortingEnabled(True)
-        self.service_table.sortItems(0, Qt.AscendingOrder)
+        self.service_table.sortItems(0, AscendingOrder)
         self.service_table.blockSignals(False)
 
     def _filter_services(self, text: str):
@@ -226,7 +227,7 @@ class ServiceBrowserWidget(QWidget):
         row = selected_items[0].row()
         name_item = self.service_table.item(row, 0)
         if name_item:
-            service = name_item.data(Qt.UserRole)
+            service = name_item.data(UserRole)
             if service:
                 # Add base_url to service info (shallow copy to avoid mutating stored data)
                 service = dict(service)
@@ -253,7 +254,7 @@ class ServiceBrowserWidget(QWidget):
         row = selected_items[0].row()
         name_item = self.service_table.item(row, 0)
         if name_item:
-            service = name_item.data(Qt.UserRole)
+            service = name_item.data(UserRole)
             if service:
                 service = dict(service)
                 service['base_url'] = self.current_base_url
@@ -266,7 +267,7 @@ class ServiceBrowserWidget(QWidget):
         for row in range(self.service_table.rowCount()):
             item = self.service_table.item(row, 0)
             if item:
-                svc = item.data(Qt.UserRole)
+                svc = item.data(UserRole)
                 if svc and svc.get('name') == service_name:
                     self.service_table.blockSignals(True)
                     self.service_table.selectRow(row)

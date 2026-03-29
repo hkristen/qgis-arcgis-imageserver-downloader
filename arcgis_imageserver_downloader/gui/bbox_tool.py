@@ -3,6 +3,7 @@ Map tool for drawing bounding box on canvas
 """
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.PyQt.QtGui import QColor
+from .compat import CrossCursor, LeftButton, Key_Escape
 from qgis.core import (
     Qgis,
     QgsRectangle,
@@ -31,7 +32,7 @@ class BBoxMapTool(QgsMapTool):
         self._create_rubber_band()
 
         # Set cursor
-        self.setCursor(Qt.CrossCursor)
+        self.setCursor(CrossCursor)
 
     def _create_rubber_band(self):
         self.rubber_band = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
@@ -40,7 +41,7 @@ class BBoxMapTool(QgsMapTool):
         self.rubber_band.setWidth(2)
 
     def canvasPressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == LeftButton:
             # Start drawing
             self.start_point = self.toMapCoordinates(event.pos())
             self.end_point = self.start_point
@@ -59,7 +60,7 @@ class BBoxMapTool(QgsMapTool):
             self._update_rubber_band(rect)
 
     def canvasReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton and self.is_drawing:
+        if event.button() == LeftButton and self.is_drawing:
             # Finish drawing
             self.end_point = self.toMapCoordinates(event.pos())
             self.is_drawing = False
@@ -89,7 +90,7 @@ class BBoxMapTool(QgsMapTool):
         self.rubber_band.setToGeometry(QgsGeometry.fromPolygonXY([points]), None)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Key_Escape:
             # Cancel drawing
             self.is_drawing = False
             self.rubber_band.reset(Qgis.GeometryType.Polygon)
