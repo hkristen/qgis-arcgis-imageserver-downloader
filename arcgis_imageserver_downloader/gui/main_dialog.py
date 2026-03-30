@@ -78,6 +78,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         # Create UI
         self._init_ui()
         self._load_settings()
+        self.visibilityChanged.connect(self._on_visibility_changed)
 
     def tr(self, message):
         return QCoreApplication.translate('ArcGISImageServerDownloader', message)
@@ -88,8 +89,8 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         layout.addWidget(self._build_server_section())
 
         services_group = self._build_services_section()
-        services_group.setMinimumHeight(150)
-        services_group.setMaximumHeight(220)
+        services_group.setMinimumHeight(220)
+        services_group.setMaximumHeight(320)
         layout.addWidget(services_group)
 
         layout.addWidget(self._build_bbox_section())
@@ -136,7 +137,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
     def _build_services_section(self):
         group = QGroupBox(self.tr('Services'))
         layout = QVBoxLayout()
-        self.service_browser = ServiceBrowserWidget()
+        self.service_browser = ServiceBrowserWidget(canvas=self.canvas)
         self.service_browser.serviceSelected.connect(self._on_service_selected)
         layout.addWidget(self.service_browser)
         group.setLayout(layout)
@@ -529,9 +530,15 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         if output_dir:
             self.output_path_edit.setText(output_dir)
 
+    def _on_visibility_changed(self, visible):
+        if not visible:
+            self._deactivate_bbox_tool()
+            self.service_browser.cleanup()
+        elif self.bbox_draw_radio.isChecked():
+            self._activate_bbox_tool()
+
     def closeEvent(self, event):
         self._save_settings()
-        self._deactivate_bbox_tool()
 
         # Cancel any running tasks
         if self.download_task:

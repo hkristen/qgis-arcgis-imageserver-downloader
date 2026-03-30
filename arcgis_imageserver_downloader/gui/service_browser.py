@@ -5,7 +5,7 @@ from typing import Optional, Dict
 
 from qgis.PyQt.QtCore import pyqtSignal, QUrl, QCoreApplication
 from .compat import UserRole, AscendingOrder, SelectRows, SingleSelection, NoEditTriggers, HeaderStretch, ResizeToContents, HeaderFixed
-from qgis.PyQt.QtGui import QDesktopServices
+from qgis.PyQt.QtGui import QColor, QDesktopServices
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -17,7 +17,18 @@ from qgis.PyQt.QtWidgets import (
     QPushButton,
     QMessageBox
 )
-from qgis.core import Qgis, QgsTask, QgsApplication
+from qgis.core import (
+    Qgis,
+    QgsTask,
+    QgsApplication,
+    QgsRectangle,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsProject,
+    QgsGeometry,
+    QgsPointXY,
+)
+from qgis.gui import QgsRubberBand
 
 from ..core.arcgis_client import ArcGISClient
 from ..utils import log
@@ -49,7 +60,7 @@ class ServiceBrowserWidget(QWidget):
     # Signal emitted when service is selected
     serviceSelected = pyqtSignal(dict)  # service info dictionary
 
-    def __init__(self, parent=None):
+    def __init__(self, canvas=None, parent=None):
         """Initialize the service browser widget."""
         super().__init__(parent)
 
@@ -57,6 +68,8 @@ class ServiceBrowserWidget(QWidget):
         self.filtered_services = []
         self.current_base_url = None
         self.fetch_task = None
+        self.canvas = canvas
+        self._extent_rubber_band = None
 
         self._init_ui()
 
@@ -104,10 +117,19 @@ class ServiceBrowserWidget(QWidget):
 
         layout.addWidget(self.service_table)
 
-        # Status label
+        # Bottom row: status label + zoom button
+        bottom_row = QHBoxLayout()
         self.status_label = QLabel('')
         self.status_label.setStyleSheet('color: gray; font-style: italic;')
-        layout.addWidget(self.status_label)
+        bottom_row.addWidget(self.status_label, 1)
+
+        self.zoom_extent_btn = QPushButton(self.tr('Zoom to extent'))
+        self.zoom_extent_btn.setEnabled(False)
+        self.zoom_extent_btn.setToolTip(self.tr('Zoom map canvas to service coverage area'))
+        self.zoom_extent_btn.clicked.connect(self._zoom_to_extent)
+        bottom_row.addWidget(self.zoom_extent_btn)
+
+        layout.addLayout(bottom_row)
 
         self.setLayout(layout)
 
@@ -231,6 +253,9 @@ class ServiceBrowserWidget(QWidget):
                 # Add base_url to service info (shallow copy to avoid mutating stored data)
                 service = dict(service)
                 service['base_url'] = self.current_base_url
+                self._update_extent_rubber_band(service)
+                has_extent = bool(service.get('full_extent') and self.canvas)
+                self.zoom_extent_btn.setEnabled(has_extent)
                 self.serviceSelected.emit(service)
 
     def _open_service_metadata(self, service: dict):
@@ -243,6 +268,72 @@ class ServiceBrowserWidget(QWidget):
 
         # Open in default browser
         QDesktopServices.openUrl(QUrl(metadata_url))
+
+    def _extent_to_canvas_rect(self, full_extent: dict) -> Optional[QgsRectangle]:
+        sr = full_extent.get('spatialReference', {})
+        wkid = sr.get('latestWkid') or sr.get('wkid')
+        if not wkid:
+            return None
+        src_crs = QgsCoordinateReferenceSystem(f'EPSG:{wkid}')
+        if not src_crs.isValid():
+            return None
+        try:
+            rect = QgsRectangle(
+                full_extent['xmin'], full_extent['ymin'],
+                full_extent['xmax'], full_extent['ymax']
+            )
+        except (KeyError, TypeError):
+            return None
+        canvas_crs = self.canvas.mapSettings().destinationCrs()
+        if src_crs != canvas_crs:
+            transform = QgsCoordinateTransform(src_crs, canvas_crs, QgsProject.instance())
+            try:
+                rect = transform.transformBoundingBox(rect)
+            except Exception as e:
+                log(f'Failed to transform service extent: {e}', Qgis.Warning)
+                return None
+        return rect
+
+    def _update_extent_rubber_band(self, service: dict):
+        self._clear_extent_rubber_band()
+        if not self.canvas:
+            return
+        full_extent = service.get('full_extent')
+        if not full_extent:
+            return
+        rect = self._extent_to_canvas_rect(full_extent)
+        if not rect:
+            return
+        self._extent_rubber_band = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
+        self._extent_rubber_band.setColor(QColor(0, 120, 215, 200))
+        self._extent_rubber_band.setFillColor(QColor(0, 120, 215, 25))
+        self._extent_rubber_band.setWidth(2)
+        points = [
+            QgsPointXY(rect.xMinimum(), rect.yMinimum()),
+            QgsPointXY(rect.xMaximum(), rect.yMinimum()),
+            QgsPointXY(rect.xMaximum(), rect.yMaximum()),
+            QgsPointXY(rect.xMinimum(), rect.yMaximum()),
+            QgsPointXY(rect.xMinimum(), rect.yMinimum()),
+        ]
+        self._extent_rubber_band.setToGeometry(QgsGeometry.fromPolygonXY([points]), None)
+
+    def _clear_extent_rubber_band(self):
+        if self._extent_rubber_band and self.canvas:
+            self._extent_rubber_band.reset(Qgis.GeometryType.Polygon)
+            self.canvas.scene().removeItem(self._extent_rubber_band)
+            self._extent_rubber_band = None
+
+    def _zoom_to_extent(self):
+        service = self.get_selected_service()
+        if not service or not self.canvas:
+            return
+        full_extent = service.get('full_extent')
+        if not full_extent:
+            return
+        rect = self._extent_to_canvas_rect(full_extent)
+        if rect and not rect.isEmpty():
+            self.canvas.setExtent(rect)
+            self.canvas.refresh()
 
     def get_selected_service(self) -> Optional[Dict]:
         """Get currently selected service."""
@@ -274,9 +365,15 @@ class ServiceBrowserWidget(QWidget):
                     self.service_table.blockSignals(False)
                     return
 
+    def cleanup(self):
+        """Remove canvas decorations. Call before widget is destroyed."""
+        self._clear_extent_rubber_band()
+
     def clear(self):
         self.services = []
         self.filtered_services = []
         self.service_table.setRowCount(0)
         self.filter_edit.clear()
         self.status_label.setText('')
+        self._clear_extent_rubber_band()
+        self.zoom_extent_btn.setEnabled(False)

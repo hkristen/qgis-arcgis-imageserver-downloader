@@ -155,7 +155,8 @@ class ArcGISClient:
                 'type': service.get('type', ''),
                 'category': '',
                 'service_name': '',
-                'year': None
+                'year': None,
+                'full_extent': meta.get('fullExtent'),
             }
 
             if '/' in name:
