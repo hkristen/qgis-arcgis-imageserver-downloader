@@ -1,5 +1,9 @@
 # ArcGIS ImageServer Downloader for QGIS
 
+[![QGIS Plugin](https://img.shields.io/badge/QGIS-Plugin-green.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
+[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fplugins.qgis.org%2Fplugins%2Farcgis_imageserver_downloader%2Fversion%2Flatest%2F&query=%24.version&label=version)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
+[![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
 A QGIS plugin for downloading raster tiles from ArcGIS ImageServer REST services and creating Cloud Optimized GeoTIFFs (COGs).
 
 ## Features
@@ -21,14 +25,16 @@ A QGIS plugin for downloading raster tiles from ArcGIS ImageServer REST services
 
 ### Installation
 
-1. Package the plugin as a ZIP:
-   ```bash
-   cd qgis-arcgis-imageserver-downloader
-   zip -r arcgis_imageserver_downloader.zip arcgis_imageserver_downloader/
-   ```
+The easiest way to install is via the official QGIS Plugin Repository:
 
+1. In QGIS: **Plugins > Manage and Install Plugins**
+2. Search for **ArcGIS ImageServer Downloader**
+3. Click **Install Plugin**
+
+Alternatively, install from ZIP:
+
+1. Download the latest release ZIP from the [GitHub repository](https://github.com/hkristen/qgis-arcgis-imageserver-downloader/releases)
 2. In QGIS: **Plugins > Manage and Install Plugins > Install from ZIP**
-
 3. Browse to the ZIP file and click **Install Plugin**
 
 ### Manual Installation
