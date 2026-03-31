@@ -1,7 +1,7 @@
 # ArcGIS ImageServer Downloader for QGIS
 
 [![QGIS Plugin](https://img.shields.io/badge/QGIS-Plugin-green.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
-[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fplugins.qgis.org%2Fplugins%2Farcgis_imageserver_downloader%2Fversion%2Flatest%2F&query=%24.version&label=version)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
 [![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 A QGIS plugin for downloading raster tiles from ArcGIS ImageServer REST services and creating Cloud Optimized GeoTIFFs (COGs).
