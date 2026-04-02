@@ -16,9 +16,8 @@ from qgis.PyQt.QtCore import pyqtSignal
 class COGProcessingTask(QgsTask):
     """Background task for creating compressed, tiled GeoTIFF with overviews from tiles."""
 
-    # Signals
-    processingComplete = pyqtSignal(str)  # output file path
-    processingFailed = pyqtSignal(str)  # error message
+    processingComplete = pyqtSignal(str)
+    processingFailed = pyqtSignal(str)
 
     def __init__(
         self,
@@ -33,15 +32,12 @@ class COGProcessingTask(QgsTask):
         """Initialize merge processing task."""
         super().__init__(description, QgsTask.CanCancel)
 
-        # Store parameters (make copies)
         self.tile_files = [Path(f) for f in tile_files]
         self.output_cog = Path(output_cog)
         self.epsg = epsg
         self.nodata = nodata
         self.output_format = output_format
         self.compression = compression
-
-        # Task state
         self.error_message = None
         self.temp_dir = None
 
@@ -53,35 +49,18 @@ class COGProcessingTask(QgsTask):
 
             log(f'Creating merged GeoTIFF from {len(self.tile_files)} tiles...')
 
-            # Create temporary directory
             self.temp_dir = tempfile.mkdtemp()
-            temp_vrt = str(Path(self.temp_dir) / 'temp.vrt')
-            temp_warped_vrt = str(Path(self.temp_dir) / 'temp_warped.vrt')
+            temp_warped = str(Path(self.temp_dir) / 'temp_warped.tif')
 
-            # Step 1: Build VRT
-            log('Building virtual raster...')
-            self.setProgress(0)
+            log(f'Warping {len(self.tile_files)} tiles to EPSG:{self.epsg}...')
+            self.setProgress(25)
 
             try:
                 subprocess.run(
-                    ['gdalbuildvrt', temp_vrt] + [str(f) for f in self.tile_files],
-                    **subprocess_run_kwargs()
-                )
-            except subprocess.CalledProcessError as e:
-                self.error_message = f'gdalbuildvrt failed: {e.stderr}'
-                log(self.error_message, Qgis.Critical)
-                return False
-
-            if self.isCanceled():
-                return False
-
-            # Step 2: Warp to target EPSG
-            log(f'Warping to EPSG:{self.epsg}...')
-            self.setProgress(33)
-
-            try:
-                subprocess.run(
-                    ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}', '-multi', temp_vrt, temp_warped_vrt],
+                    ['gdalwarp', '-t_srs', f'EPSG:{self.epsg}',
+                     '-multi', '-wo', 'NUM_THREADS=ALL_CPUS']
+                    + [str(f) for f in self.tile_files]
+                    + [temp_warped],
                     **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
@@ -92,17 +71,15 @@ class COGProcessingTask(QgsTask):
             if self.isCanceled():
                 return False
 
-            # Step 3: Create output GeoTIFF based on format selection
             format_names = {1: 'uncompressed', 2: self.compression}
             format_name = format_names.get(self.output_format, self.compression)
             log(f'Creating {format_name} GeoTIFF...')
             self.setProgress(66)
 
-            # Ensure output directory exists
             self.output_cog.parent.mkdir(parents=True, exist_ok=True)
 
-            if not Path(temp_warped_vrt).exists():
-                self.error_message = f'Input VRT not found: {temp_warped_vrt}'
+            if not Path(temp_warped).exists():
+                self.error_message = f'Warped intermediate file not found: {temp_warped}'
                 log(self.error_message, Qgis.Critical)
                 return False
 
@@ -122,7 +99,7 @@ class COGProcessingTask(QgsTask):
             if self.nodata is not None:
                 translate_cmd += ['-a_nodata', str(self.nodata)]
 
-            translate_cmd += [temp_warped_vrt, str(self.output_cog)]
+            translate_cmd += [temp_warped, str(self.output_cog)]
 
             try:
                 subprocess.run(translate_cmd, **subprocess_run_kwargs())
@@ -134,7 +111,6 @@ class COGProcessingTask(QgsTask):
             if self.isCanceled():
                 return False
 
-            # Step 4: Add overviews for better performance (only for compressed format)
             if self.output_format == 2 and self.output_cog.exists():
                 log('Adding overviews...')
                 self.setProgress(85)
@@ -147,10 +123,8 @@ class COGProcessingTask(QgsTask):
                     )
                     log('Overviews added successfully')
                 except subprocess.CalledProcessError as e:
-                    # Overviews are nice to have but not critical
                     log(f'Failed to add overviews (non-critical): {e.stderr}', Qgis.Warning)
             else:
-                # Skip overviews for uncompressed format
                 log('Skipping overviews (uncompressed format)')
                 self.setProgress(85)
 
@@ -159,7 +133,7 @@ class COGProcessingTask(QgsTask):
 
             self.setProgress(100)
 
-            file_size = self.output_cog.stat().st_size / (1024 * 1024)  # MB
+            file_size = self.output_cog.stat().st_size / (1024 * 1024)
             log(f'Successfully created COG: {self.output_cog} ({file_size:.2f} MB)')
             return True
 
@@ -169,7 +143,6 @@ class COGProcessingTask(QgsTask):
             return False
 
         finally:
-            # Cleanup temporary files (always clean up VRT files)
             if self.temp_dir:
                 try:
                     shutil.rmtree(self.temp_dir)

@@ -3,7 +3,7 @@ name=ArcGIS ImageServer Downloader
 qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 description=Download raster tiles from ArcGIS ImageServer REST services and create Cloud Optimized GeoTIFFs (COGs)
-version=0.1.2
+version=0.1.3
 author=Harald Kristen
 email=haraldkristen@posteo.at
 
@@ -20,7 +20,8 @@ icon=icon.svg
 hasProcessingProvider=yes
 experimental=False
 deprecated=False
-changelog=0.1.2 - Show service coverage as rubber band on canvas when selecting a service; add Zoom to extent button; enlarge service list
+changelog=0.1.3 - Fix mixed-CRS tile mosaicking: pass tiles directly to gdalwarp instead of gdalbuildvrt which silently drops differing CRS tiles
+    0.1.2 - Show service coverage as rubber band on canvas when selecting a service; add Zoom to extent button; enlarge service list
     0.1.1 - Fix flake8 issues and remove deprecated supportsQt6 flag
     0.1.0 - Initial release
 

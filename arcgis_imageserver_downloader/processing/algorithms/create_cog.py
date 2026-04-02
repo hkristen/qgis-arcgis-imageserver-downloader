@@ -55,10 +55,9 @@ class CreateCOGAlgorithm(QgsProcessingAlgorithm):
         return self.tr('''Creates a Cloud Optimized GeoTIFF (COG) from a folder of raster tiles.
 
 The algorithm:
-1. Builds a virtual raster (VRT) from all tiles in the input folder
-2. Warps the VRT to the specified EPSG code
-3. Adds overviews for efficient access
-4. Converts to COG format with LZW compression
+1. Warps all tiles to the specified EPSG code (handles mixed-CRS inputs correctly)
+2. Adds overviews for efficient access
+3. Converts to COG format with LZW compression
 
 The output is a single, optimized raster file suitable for cloud storage and efficient web access.''')
 
@@ -120,7 +119,6 @@ The output is a single, optimized raster file suitable for cloud storage and eff
         if not input_folder:
             raise QgsProcessingException(self.tr('Input folder is required'))
 
-        # Find all raster files in folder
         input_dir = Path(input_folder)
         raster_extensions = ['.tif', '.tiff', '.jp2', '.jpg', '.png']
         tile_files = []
@@ -134,29 +132,16 @@ The output is a single, optimized raster file suitable for cloud storage and eff
 
         temp_dir = tempfile.mkdtemp()
         try:
-            temp_vrt = os.path.join(temp_dir, 'temp.vrt')
             temp_warped = os.path.join(temp_dir, 'temp_warped.tif')
 
-            # Step 1: Build VRT from tiles
-            feedback.setProgress(0)
-            feedback.pushInfo('Building virtual raster from tiles...')
-            try:
-                subprocess.run(
-                    ['gdalbuildvrt', temp_vrt] + [str(f) for f in tile_files],
-                    **subprocess_run_kwargs()
-                )
-            except subprocess.CalledProcessError as e:
-                raise QgsProcessingException(self.tr('gdalbuildvrt failed: {0}').format(e.stderr))
-
-            if feedback.isCanceled():
-                return {}
-
-            # Step 2: Warp to target EPSG
             feedback.setProgress(25)
-            feedback.pushInfo(f'Warping to EPSG:{epsg}...')
+            feedback.pushInfo(f'Warping {len(tile_files)} tiles to EPSG:{epsg}...')
             try:
                 subprocess.run(
-                    ['gdalwarp', '-t_srs', f'EPSG:{epsg}', '-multi', temp_vrt, temp_warped],
+                    ['gdalwarp', '-t_srs', f'EPSG:{epsg}',
+                     '-multi', '-wo', 'NUM_THREADS=ALL_CPUS']
+                    + [str(f) for f in tile_files]
+                    + [temp_warped],
                     **subprocess_run_kwargs()
                 )
             except subprocess.CalledProcessError as e:
@@ -165,7 +150,6 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             if feedback.isCanceled():
                 return {}
 
-            # Step 3: Add overviews
             feedback.setProgress(50)
             feedback.pushInfo('Adding overviews...')
             try:
@@ -179,7 +163,6 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             if feedback.isCanceled():
                 return {}
 
-            # Step 4: Convert to COG
             feedback.setProgress(75)
             feedback.pushInfo('Converting to Cloud Optimized GeoTIFF...')
             cog_cmd = [
