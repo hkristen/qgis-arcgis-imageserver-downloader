@@ -168,6 +168,7 @@ The output is a single, optimized raster file suitable for cloud storage and eff
             cog_cmd = [
                 'gdal_translate', '-of', 'COG',
                 '-co', 'COMPRESS=LZW',
+                '-co', 'BIGTIFF=YES',
                 '-co', 'OVERVIEWS=IGNORE_EXISTING',
             ]
             if nodata is not None:

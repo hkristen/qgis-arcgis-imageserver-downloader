@@ -97,6 +97,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         layout.addWidget(self._build_output_section())
         layout.addWidget(self._build_progress_section())
         layout.addWidget(self._build_action_buttons())
+        layout.addWidget(self._build_toolbox_hint())
         layout.addSpacing(12)
         content.setLayout(layout)
 
@@ -135,8 +136,11 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         return group
 
     def _build_services_section(self):
-        group = QGroupBox(self.tr('Services'))
+        group = QGroupBox(self.tr('Image Services'))
         layout = QVBoxLayout()
+        hint = QLabel(self.tr('Select a raster layer offered by the server above.'))
+        hint.setStyleSheet('color: gray; font-style: italic;')
+        layout.addWidget(hint)
         self.service_browser = ServiceBrowserWidget(canvas=self.canvas)
         self.service_browser.serviceSelected.connect(self._on_service_selected)
         layout.addWidget(self.service_browser)
@@ -275,6 +279,15 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         group.setLayout(layout)
         return group
 
+    def _build_toolbox_hint(self):
+        label = QLabel(self.tr(
+            'Additional tools (Create COG, Discover Services) are available in '
+            'Processing Toolbox \u2192 ArcGIS ImageServer Downloader.'
+        ))
+        label.setStyleSheet('color: gray; font-style: italic;')
+        label.setWordWrap(True)
+        return label
+
     def _build_action_buttons(self):
         widget = QWidget()
         layout = QHBoxLayout()
@@ -295,7 +308,7 @@ class ArcGISImageServerDockWidget(QgsDockWidget, ServerManagerMixin, DownloadCon
         self.compression_combo.setEnabled(is_compressed)
 
         if fmt == 0:
-            text = self.tr('Downloads tiles as individual files into the output folder. No merging or processing is done.')
+            text = self.tr('Downloads tiles as individual files into the output folder. No merging or processing is done.\n\nTip: To merge tiles into a COG afterwards, use Processing Toolbox \u2192 ArcGIS ImageServer Downloader \u2192 Create Cloud Optimized GeoTIFF.')
         elif fmt == 1:
             text = self.tr('Merges all tiles into a single GeoTIFF using gdalbuildvrt + gdalwarp + gdal_translate. No compression applied — fastest processing, largest output file.')
         else:

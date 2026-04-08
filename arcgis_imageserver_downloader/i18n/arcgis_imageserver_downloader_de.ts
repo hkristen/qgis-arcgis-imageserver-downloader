@@ -48,6 +48,14 @@
         <translation>Dienste</translation>
     </message>
     <message>
+        <source>Image Services</source>
+        <translation>Bilddienste</translation>
+    </message>
+    <message>
+        <source>Select a raster layer offered by the server above.</source>
+        <translation>Wählen Sie einen Rasterlayer des ausgewählten Servers aus.</translation>
+    </message>
+    <message>
         <source>Bounding Box</source>
         <translation>Begrenzungsrahmen</translation>
     </message>
@@ -358,6 +366,18 @@
     <message>
         <source>Showing {0} of {1} services</source>
         <translation>{0} von {1} Diensten werden angezeigt</translation>
+    </message>
+    <message>
+        <source>Downloads tiles as individual files into the output folder. No merging or processing is done.
+
+Tip: To merge tiles into a COG afterwards, use Processing Toolbox → ArcGIS ImageServer Downloader → Create Cloud Optimized GeoTIFF.</source>
+        <translation>Lädt Kacheln als einzelne Dateien in den Ausgabeordner herunter. Kein Zusammenführen oder Verarbeiten.
+
+Tipp: Um Kacheln anschließend zu einem COG zusammenzuführen, verwenden Sie Verarbeitungswerkzeuge → ArcGIS ImageServer Downloader → Cloud Optimized GeoTIFF erstellen.</translation>
+    </message>
+    <message>
+        <source>Additional tools (Create COG, Discover Services) are available in Processing Toolbox → ArcGIS ImageServer Downloader.</source>
+        <translation>Weitere Werkzeuge (COG erstellen, Dienste entdecken) stehen in den Verarbeitungswerkzeuge → ArcGIS ImageServer Downloader zur Verfügung.</translation>
     </message>
 </context>
 <context>

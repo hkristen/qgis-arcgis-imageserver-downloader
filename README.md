@@ -1,7 +1,7 @@
 # ArcGIS ImageServer Downloader for QGIS
 
 [![QGIS Plugin](https://img.shields.io/badge/QGIS-Plugin-green.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
+[![Version](https://img.shields.io/badge/version-0.1.4-blue.svg)](https://plugins.qgis.org/plugins/arcgis_imageserver_downloader)
 [![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 A QGIS plugin for downloading raster tiles from ArcGIS ImageServer REST services and creating Cloud Optimized GeoTIFFs (COGs).
@@ -16,7 +16,7 @@ A QGIS plugin for downloading raster tiles from ArcGIS ImageServer REST services
 - Multiple bbox selection methods: draw on canvas, from layer extent, or manual coordinates
 - Automatic Cloud Optimized GeoTIFF generation with selectable compression
 - Zero external dependencies — uses only QGIS and Qt libraries
-- Compatible with QGIS 3.40+ (Qt5) and QGIS 4.0+ (Qt6)
+- Compatible with QGIS 3.28+ (Qt5) and QGIS 4.0+ (Qt6)
 - Internationalization support (English, German)
 
 > **Note:** The plugin is designed around the ArcGIS ImageServer REST API and is currently only tested against GIS Steiermark endpoints. Compatibility with other ArcGIS ImageServer deployments is likely but not yet verified.
@@ -150,7 +150,7 @@ Custom servers are saved in your QGIS settings directory as `arcgis_imageserver_
 
 ## Requirements
 
-- **QGIS 3.40+** (Qt5) or **QGIS 4.0+** (Qt6)
+- **QGIS 3.28+** (Qt5) or **QGIS 4.0+** (Qt6)
 - GDAL 3.1+ with COG driver support
 
 ## Troubleshooting
@@ -158,6 +158,8 @@ Custom servers are saved in your QGIS settings directory as `arcgis_imageserver_
 **Plugin doesn't load** — Check QGIS Python console for errors; verify QGIS 3.40+.
 
 **Services not loading** — Verify the server URL is accessible. Authentication is not currently supported.
+
+**COG creation fails with "Maximum TIFF file size exceeded"** — Your output exceeds the 4 GB classic TIFF limit. This is handled automatically since v0.1.4 (BIGTIFF=YES). If you see this with an older version, upgrade the plugin.
 
 **COG creation fails** — Check GDAL version (`gdalinfo --format COG`); verify disk space.
 
